@@ -1,0 +1,34 @@
+{
+  "short_name": "Pocket Chores",
+  "name": "Pocket Money Chores",
+  "description": "A fun and interactive chore tracking app to manage pocket money. Assign chores, set values, and track weekly earnings to build good habits.",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "scope": "/",
+  "theme_color": "#3B82F6",
+  "background_color": "#f1f5f9"
+}
