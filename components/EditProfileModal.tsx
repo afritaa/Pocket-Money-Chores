@@ -1,37 +1,30 @@
+
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Profile, Day } from '../types';
-import { DAYS_OF_WEEK, UserCircleIcon, KeyIcon } from '../constants';
+import { DAYS_OF_WEEK, UserCircleIcon, TrashIcon } from '../constants';
 
 interface EditProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (profileData: Omit<Profile, 'passcode'>) => void;
+  onSave: (profileData: Profile) => void;
+  onDelete: (profileId: string) => void;
   initialData: Profile;
-  onUpdatePasscode: (current: string, newPasscode: string) => Promise<void>;
 }
 
-const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, onSave, initialData, onUpdatePasscode }) => {
+const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, onSave, onDelete, initialData }) => {
   const [name, setName] = useState('');
   const [image, setImage] = useState<string | null>(null);
   const [payDay, setPayDay] = useState<Day | null>(null);
   const [error, setError] = useState('');
-
-  const [currentPasscode, setCurrentPasscode] = useState('');
-  const [newPasscode, setNewPasscode] = useState('');
-  const [confirmNewPasscode, setConfirmNewPasscode] = useState('');
-  const [securityError, setSecurityError] = useState('');
-  const [securitySuccess, setSecuritySuccess] = useState('');
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
   const resetForm = useCallback(() => {
     setName(initialData?.name || '');
     setImage(initialData?.image || null);
     setPayDay(initialData?.payDay || null);
     setError('');
-    setSecurityError('');
-    setSecuritySuccess('');
-    setCurrentPasscode('');
-    setNewPasscode('');
-    setConfirmNewPasscode('');
+    setIsConfirmingDelete(false);
   }, [initialData]);
 
   useEffect(() => {
@@ -57,84 +50,53 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, on
       setError("Child's name is required.");
       return;
     }
-    onSave({ name: name.trim(), image, payDay });
-  };
-
-  const handlePasscodeChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSecurityError('');
-    setSecuritySuccess('');
-
-    if (!initialData.passcode) return; 
-
-    if (!/^\d{4}$/.test(newPasscode)) {
-      setSecurityError("New passcode must be 4 digits.");
-      return;
-    }
-    if (newPasscode !== confirmNewPasscode) {
-      setSecurityError("New passcodes don't match.");
-      return;
-    }
-
-    try {
-      await onUpdatePasscode(currentPasscode, newPasscode);
-      setSecuritySuccess('Passcode updated successfully!');
-      setCurrentPasscode('');
-      setNewPasscode('');
-      setConfirmNewPasscode('');
-    } catch (error) {
-      if (error instanceof Error) {
-        setSecurityError(error.message);
-      } else {
-        setSecurityError("An unknown error occurred.");
-      }
-    }
+    onSave({ ...initialData, name: name.trim(), image, payDay });
   };
 
   if (!isOpen) return null;
 
   return (
     <div 
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 transition-opacity"
+      className="fixed inset-0 bg-[var(--bg-backdrop)] backdrop-blur-sm flex justify-center items-center z-50 transition-opacity"
       onClick={onClose}
     >
       <div 
-        className="bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-2xl shadow-2xl p-8 m-4 w-full max-w-md transform transition-all max-h-[90vh] overflow-y-auto text-slate-900 dark:text-white custom-scrollbar"
+        className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl shadow-2xl p-8 m-4 w-full max-w-md transform transition-all max-h-[90vh] overflow-y-auto text-[var(--text-primary)] custom-scrollbar"
         onClick={e => e.stopPropagation()}
       >
         <div className='text-center mb-6'>
-          <h2 className="text-2xl font-bold">Edit Kid's Profile</h2>
+          <h2 className="text-2xl font-bold">Edit {initialData.name}'s Profile</h2>
         </div>
 
-        {error && <p className="bg-red-500/30 text-red-900 dark:text-red-100 p-3 rounded-lg mb-4 border border-red-400/50">{error}</p>}
+        {error && <p className="bg-[var(--danger-bg-subtle)] text-[var(--danger)] p-3 rounded-lg mb-4 border border-[var(--danger-border)]">{error}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="flex flex-col items-center space-y-4">
             {image ? (
-              <img src={image} alt="Profile" className="h-24 w-24 rounded-full object-cover border-2 border-slate-300 dark:border-gray-700 shadow-lg" />
+              <img src={image} alt="Profile" className="h-24 w-24 rounded-full object-cover border-2 border-[var(--border-secondary)] shadow-lg" />
             ) : (
-              <UserCircleIcon className="h-24 w-24 text-slate-300 dark:text-gray-600" />
+              <UserCircleIcon className="h-24 w-24 text-[var(--text-tertiary)]" />
             )}
-            <label htmlFor="profile-image-upload" className="cursor-pointer px-4 py-2 rounded-lg text-sm text-slate-800 dark:text-gray-200 bg-slate-200 dark:bg-gray-800 hover:bg-slate-300 dark:hover:bg-gray-700 font-semibold border border-slate-300 dark:border-gray-700 transition-all">
+            <label htmlFor="profile-image-upload" className="cursor-pointer px-4 py-2 rounded-lg text-sm text-[var(--text-primary)] bg-[var(--bg-tertiary)] hover:opacity-80 font-semibold border border-[var(--border-secondary)] transition-all">
               Change Picture
             </label>
             <input id="profile-image-upload" type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
           </div>
 
           <div>
-            <label htmlFor="child-name" className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">Child's Name</label>
+            <label htmlFor="child-name" className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Child's Name</label>
             <input
               id="child-name"
               type="text"
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g., Alex"
-              className="w-full px-4 py-3 bg-slate-100 dark:bg-gray-800 border-slate-300 dark:border-gray-700 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-400 dark:placeholder:text-gray-500"
+              className="w-full px-4 py-3 bg-[var(--bg-tertiary)] border-[var(--border-secondary)] border rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] transition-all placeholder:text-[var(--text-tertiary)]"
             />
           </div>
 
           <div>
-            <span className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">Pay Day</span>
+            <span className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Pay Day</span>
             <div className="grid grid-cols-4 gap-2">
               {DAYS_OF_WEEK.map(day => (
                 <button
@@ -143,8 +105,8 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, on
                   onClick={() => setPayDay(day)}
                   className={`py-2 rounded-lg font-bold transition-all duration-300 ${
                     payDay === day
-                      ? 'bg-blue-500 dark:bg-blue-600 text-white shadow-lg'
-                      : 'bg-slate-200 dark:bg-gray-800 hover:bg-slate-300 dark:hover:bg-gray-700 text-slate-700 dark:text-gray-200 border border-slate-300 dark:border-gray-700'
+                      ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)] shadow-lg'
+                      : 'bg-[var(--bg-tertiary)] hover:opacity-80 text-[var(--text-primary)] border border-[var(--border-secondary)]'
                   }`}
                 >
                   {day.slice(0, 3)}
@@ -155,8 +117,8 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, on
                   onClick={() => setPayDay(null)}
                   className={`py-2 rounded-lg font-bold transition-all duration-300 col-span-4 sm:col-span-1 ${
                     payDay === null
-                      ? 'bg-red-500 dark:bg-red-600 text-white shadow-lg'
-                      : 'bg-slate-200 dark:bg-gray-800 hover:bg-slate-300 dark:hover:bg-gray-700 text-slate-700 dark:text-gray-200 border border-slate-300 dark:border-gray-700'
+                      ? 'bg-[var(--danger)] text-[var(--danger-text)] shadow-lg'
+                      : 'bg-[var(--bg-tertiary)] hover:opacity-80 text-[var(--text-primary)] border border-[var(--border-secondary)]'
                   }`}
                 >
                   None
@@ -164,79 +126,73 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, on
             </div>
           </div>
           
-          <div className="flex justify-end space-x-4 pt-4 border-t border-slate-200 dark:border-gray-700">
+          <div className="pt-6 mt-6 border-t border-[var(--border-primary)] flex justify-end space-x-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2 rounded-lg text-slate-800 dark:text-gray-200 bg-slate-200 hover:bg-slate-300 dark:bg-gray-800 dark:hover:bg-gray-700 border border-slate-300 dark:border-gray-700 font-semibold transition-colors"
+              className="px-6 py-2 rounded-lg text-[var(--text-primary)] bg-[var(--bg-tertiary)] hover:opacity-80 border border-[var(--border-secondary)] font-semibold transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-6 py-2 rounded-lg text-white bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-px transition-all"
+              className="px-6 py-2 rounded-lg text-[var(--success-text)] bg-[var(--success)] hover:opacity-80 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-px transition-all"
             >
               Save Profile
             </button>
           </div>
         </form>
-
-        {initialData.passcode && (
-          <div className="pt-6 border-t border-slate-200 dark:border-gray-700 mt-6">
-            <div className="flex items-center gap-3 mb-4">
-                <KeyIcon className="h-6 w-6 text-slate-500 dark:text-gray-400" />
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white">Security</h3>
-            </div>
-
-            {securityError && <p className="bg-red-500/30 text-red-900 dark:text-red-100 p-3 rounded-lg mb-4 text-sm">{securityError}</p>}
-            {securitySuccess && <p className="bg-green-500/30 text-green-800 dark:text-green-100 p-3 rounded-lg mb-4 text-sm">{securitySuccess}</p>}
-            
-            <form onSubmit={handlePasscodeChange} className="space-y-4">
-                 <div>
-                    <label htmlFor="current-passcode" className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">Current Passcode</label>
-                    <input id="current-passcode" type="password" inputMode="numeric" maxLength={4} value={currentPasscode} onChange={e => setCurrentPasscode(e.target.value.replace(/\D/g, ''))} className="w-full px-4 py-3 bg-slate-100 dark:bg-gray-800 border-slate-300 dark:border-gray-700 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all"/>
-                </div>
-                 <div>
-                    <label htmlFor="new-passcode" className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">New 4-Digit Passcode</label>
-                    <input id="new-passcode" type="password" inputMode="numeric" maxLength={4} value={newPasscode} onChange={e => setNewPasscode(e.target.value.replace(/\D/g, ''))} className="w-full px-4 py-3 bg-slate-100 dark:bg-gray-800 border-slate-300 dark:border-gray-700 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all"/>
-                </div>
-                 <div>
-                    <label htmlFor="confirm-new-passcode" className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">Confirm New Passcode</label>
-                    <input id="confirm-new-passcode" type="password" inputMode="numeric" maxLength={4} value={confirmNewPasscode} onChange={e => setConfirmNewPasscode(e.target.value.replace(/\D/g, ''))} className="w-full px-4 py-3 bg-slate-100 dark:bg-gray-800 border-slate-300 dark:border-gray-700 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all"/>
-                </div>
-                <div className="flex justify-end pt-2">
-                    <button type="submit" className="px-6 py-2 rounded-lg text-white bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 font-semibold shadow-lg transition-all">
-                        Change Passcode
+        <div className="pt-6 mt-6 border-t border-red-500/30">
+          {!isConfirmingDelete ? (
+            <button
+                type="button"
+                onClick={() => setIsConfirmingDelete(true)}
+                className="w-full flex items-center justify-center gap-2 text-[var(--danger)] bg-[var(--danger-bg-subtle)] hover:bg-opacity-80 font-semibold py-2 px-4 rounded-lg transition-colors"
+            >
+                <TrashIcon />
+                Delete {initialData.name}'s Profile
+            </button>
+          ) : (
+            <div className="text-center p-4 bg-[var(--danger-bg-subtle)] rounded-lg animate-fade-in-fast">
+                <p className="font-semibold text-[var(--danger)]">Are you sure?</p>
+                <p className="text-sm text-[var(--danger)] opacity-80 mt-1 mb-4">This will permanently delete this profile and all associated data. This action cannot be undone.</p>
+                <div className="flex justify-center gap-4">
+                    <button
+                        type="button"
+                        onClick={() => setIsConfirmingDelete(false)}
+                        className="px-6 py-2 rounded-lg font-semibold text-[var(--text-secondary)] bg-[var(--bg-tertiary)] hover:opacity-80"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => onDelete(initialData.id)}
+                        className="px-6 py-2 rounded-lg font-semibold text-[var(--danger-text)] bg-[var(--danger)] hover:opacity-80"
+                    >
+                        Yes, Delete
                     </button>
                 </div>
-            </form>
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
        <style>{`
         .custom-scrollbar::-webkit-scrollbar {
             width: 8px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.1);
+            background: rgba(128, 128, 128, 0.1);
             border-radius: 10px;
-        }
-        .dark .custom-scrollbar::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(0, 0, 0, 0.2);
+            background: rgba(128, 128, 128, 0.2);
             border-radius: 10px;
         }
-        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.2);
-        }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: rgba(0, 0, 0, 0.4);
+            background: rgba(128, 128, 128, 0.4);
         }
-        .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.4);
-        }
+        @keyframes fade-in-fast { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in-fast { animation: fade-in-fast 0.2s ease-out forwards; }
       `}</style>
     </div>
   );

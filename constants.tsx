@@ -1,5 +1,5 @@
 import React from 'react';
-import { Day } from './types';
+import { Day, ChoreCategory } from './types';
 
 export const DAYS_OF_WEEK: Day[] = [Day.Sun, Day.Mon, Day.Tue, Day.Wed, Day.Thu, Day.Fri, Day.Sat];
 export const DAY_SHORT_NAMES: { [key in Day]: string } = {
@@ -12,8 +12,23 @@ export const DAY_SHORT_NAMES: { [key in Day]: string } = {
   [Day.Sat]: 'S',
 };
 
-export const CoinIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" viewBox="0 0 20 20" >
+export const CHORE_CATEGORIES: ChoreCategory[] = [
+    ChoreCategory.Morning,
+    ChoreCategory.BeforeSchool,
+    ChoreCategory.AfterSchool,
+    ChoreCategory.Evening
+];
+
+export const CHORE_CATEGORY_ORDER: { [key in ChoreCategory]: number } = {
+    [ChoreCategory.Morning]: 1,
+    [ChoreCategory.BeforeSchool]: 2,
+    [ChoreCategory.AfterSchool]: 3,
+    [ChoreCategory.Evening]: 4,
+};
+
+
+export const CoinIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className || "h-10 w-10"} viewBox="0 0 20 20" >
         <path d="M10 18a8 8 0 100-16 8 8 0 000 16z" fill="#f59e0b" />
         <text
             x="50%"
@@ -69,13 +84,13 @@ export const HistoryIcon = () => (
 );
 
 export const UserCircleIcon = ({ className }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className || "h-8 w-8 text-slate-500 dark:text-gray-200"} viewBox="0 0 20 20" fill="currentColor">
+    <svg xmlns="http://www.w3.org/2000/svg" className={className || "h-8 w-8 text-slate-500"} viewBox="0 0 20 20" fill="currentColor">
       <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0012 11z" clipRule="evenodd" />
     </svg>
   );
 
 export const DragHandleIcon = () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-slate-400 dark:text-gray-600">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-slate-400 cursor-grab">
         <circle cx="9" cy="6" r="1.5" fill="currentColor"/>
         <circle cx="15" cy="6" r="1.5" fill="currentColor"/>
         <circle cx="9" cy="12" r="1.5" fill="currentColor"/>
@@ -100,5 +115,18 @@ export const SunIcon = ({ className }: { className?: string }) => (
 export const MoonIcon = ({ className }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className || "h-6 w-6"} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+    </svg>
+);
+
+export const MenuIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className || "h-6 w-6"} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+    </svg>
+);
+
+export const PaintBrushIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className || "h-6 w-6"} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.47 2.118v-.07a2.25 2.25 0 012.24-1.994 2.25 2.25 0 001.08-4.43M12 21h3.386M12 17.25h3.386m0 0a3.375 3.375 0 004.28-4.282M15.386 17.25a3.375 3.375 0 01-4.28-4.282m0 0a3.375 3.375 0 014.28 4.282m0 0v-.008c0-.344.276-.625.625-.625h.008a.625.625 0 01.625.625v.008c0 .344-.276.625-.625.625h-.008a.625.625 0 01-.625-.625z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c-1.933 0-3.5 1.567-3.5 3.5S10.067 10 12 10s3.5-1.567 3.5-3.5S13.933 3 12 3z" />
     </svg>
 );

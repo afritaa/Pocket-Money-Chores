@@ -6,9 +6,10 @@ interface PasscodeEntryModalProps {
   onClose: () => void;
   onSuccess: () => void;
   passcodeToMatch: string | null;
+  onForgotPassword: () => void;
 }
 
-const PasscodeEntryModal: React.FC<PasscodeEntryModalProps> = ({ isOpen, onClose, onSuccess, passcodeToMatch }) => {
+const PasscodeEntryModal: React.FC<PasscodeEntryModalProps> = ({ isOpen, onClose, onSuccess, passcodeToMatch, onForgotPassword }) => {
   const [passcode, setPasscode] = useState('');
   const [error, setError] = useState('');
 
@@ -33,23 +34,23 @@ const PasscodeEntryModal: React.FC<PasscodeEntryModalProps> = ({ isOpen, onClose
 
   return (
     <div 
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 transition-opacity"
+      className="fixed inset-0 bg-[var(--bg-backdrop)] backdrop-blur-sm flex justify-center items-center z-50 transition-opacity"
       onClick={onClose}
     >
       <div 
-        className="bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-2xl shadow-2xl p-8 m-4 w-full max-w-sm transform transition-all text-center text-slate-900 dark:text-white"
+        className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl shadow-2xl p-8 m-4 w-full max-w-sm transform transition-all text-center text-[var(--text-primary)]"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex justify-center mb-4">
-            <KeyIcon className="h-12 w-12 text-blue-500 dark:text-blue-400" />
+            <KeyIcon className="h-12 w-12 text-[var(--accent-primary)]" />
         </div>
         <h2 className="text-2xl font-bold mb-2">Enter Passcode</h2>
-        <p className="text-slate-600 dark:text-gray-300 mb-6">Enter the 4-digit passcode to access parent mode.</p>
+        <p className="text-[var(--text-secondary)] mb-6">Enter the 4-digit passcode to access parent mode.</p>
         
-        {error && <p className="bg-red-500/30 text-red-900 dark:text-red-100 p-3 rounded-lg mb-4 border border-red-400/50">{error}</p>}
+        {error && <p className="bg-[var(--danger-bg-subtle)] text-[var(--danger)] p-3 rounded-lg mb-4 border border-[var(--danger-border)]">{error}</p>}
         
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-4">
             <label htmlFor="entry-passcode" className="sr-only">Passcode</label>
             <input
               id="entry-passcode"
@@ -60,26 +61,35 @@ const PasscodeEntryModal: React.FC<PasscodeEntryModalProps> = ({ isOpen, onClose
               autoFocus
               onChange={e => setPasscode(e.target.value.replace(/\D/g, ''))}
               placeholder="••••"
-              className="w-full px-4 py-3 text-center tracking-[1em] text-2xl bg-slate-100 dark:bg-gray-800 border-slate-300 dark:border-gray-700 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all"
+              className="w-full px-4 py-3 text-center tracking-[1em] text-2xl bg-[var(--bg-tertiary)] border-[var(--border-secondary)] border rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] transition-all"
             />
           </div>
           
-          <div className="flex justify-end space-x-4 pt-4">
+          <div className="flex justify-end space-x-4 pt-4 mt-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2 rounded-lg text-slate-800 dark:text-gray-200 bg-slate-200 hover:bg-slate-300 dark:bg-gray-800 dark:hover:bg-gray-700 border border-slate-300 dark:border-gray-700 font-semibold transition-colors"
+              className="px-6 py-2 rounded-lg text-[var(--text-primary)] bg-[var(--bg-tertiary)] hover:opacity-80 border border-[var(--border-secondary)] font-semibold transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-6 py-2 rounded-lg text-white bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-px transition-all"
+              className="px-6 py-2 rounded-lg text-[var(--accent-primary-text)] bg-[var(--accent-primary)] hover:bg-[var(--accent-secondary)] font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-px transition-all"
             >
               Unlock
             </button>
           </div>
         </form>
+        <div className="mt-6 text-center">
+            <button
+                type="button"
+                onClick={onForgotPassword}
+                className="text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--accent-primary)] hover:underline transition-colors"
+            >
+                Forgot Passcode?
+            </button>
+        </div>
       </div>
     </div>
   );
