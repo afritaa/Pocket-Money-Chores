@@ -5,7 +5,7 @@ import { Chore, Day, EarningsRecord, Profile, ChoreCategory, ParentSettings } fr
 import Header from './components/Header';
 import ChoreList from './components/ChoreList';
 import ChoreFormModal from './components/AddChoreModal';
-import { PlusIcon, CHORE_CATEGORY_ORDER, UserCircleIcon, ChevronLeftIcon, ChevronRightIcon } from './constants';
+import { PlusIcon, CHORE_CATEGORY_ORDER, UserCircleIcon } from './constants';
 import EarningsHistoryModal from './components/EarningsHistoryModal';
 import MenuBanner from './components/MenuBanner';
 import PendingCashOutsModal from './components/PendingCashOutsModal';
@@ -590,8 +590,6 @@ const App: React.FC = () => {
 
   const themeForModal = isKidsMode ? (activeProfile?.theme || 'light') : (parentSettings.theme || 'light');
   
-  const kidsModeTitle = isKidsMode ? (isToday ? "Today's Chores" : `${selectedDate.toLocaleDateString('en-US', { weekday: 'long' })}'s Chores`) : undefined;
-
   const handlePreviousWeek = () => {
     setCurrentDate(prevDate => {
       const newDate = new Date(prevDate);
@@ -617,8 +615,19 @@ const App: React.FC = () => {
 
   const weeklyTitle = useMemo(() => {
     if (isViewingCurrentWeek) {
-      return "This Week's Chores";
+      return "This Week";
     }
+    
+    const today = new Date();
+    const lastWeekDate = new Date(today);
+    lastWeekDate.setDate(today.getDate() - 7);
+    const startOfLastWeek = getStartOfWeek(lastWeekDate);
+    const startOfViewingWeek = getStartOfWeek(currentDate);
+
+    if (formatDate(startOfLastWeek) === formatDate(startOfViewingWeek)) {
+      return "Last Week";
+    }
+
     const start = currentWeekDays[0];
     const end = currentWeekDays[6];
     const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
@@ -628,7 +637,7 @@ const App: React.FC = () => {
       return `${startMonth} ${start.getDate()} - ${end.getDate()}`;
     }
     return `${startMonth} ${start.getDate()} - ${endMonth} ${end.getDate()}`;
-  }, [currentWeekDays, isViewingCurrentWeek]);
+  }, [currentWeekDays, isViewingCurrentWeek, currentDate]);
 
 
   if (!hasCompletedOnboarding) {
@@ -646,39 +655,29 @@ const App: React.FC = () => {
       <div className={`container mx-auto p-4 sm:p-6 md:p-8 transition-all duration-300 ${isWelcomeModalOpen ? 'blur-sm' : ''}`}>
         <header>
           <MenuBanner isKidsMode={isKidsMode} onSwitchToChild={handleSwitchToChild} onAttemptSwitchToParentMode={handleAttemptSwitchToParentMode} pendingCount={pendingCashOuts.length} onShowPending={handleOpenPendingModal} profiles={profiles} activeProfileId={activeProfileId} onEditProfile={handleOpenEditModalForProfile} onShowParentPasscode={() => setIsParentPasscodeModalOpen(true)} onShowAddChildModal={() => setIsAddChildModalOpen(true)} onShowThemeModal={() => setIsThemeModalOpen(true)} />
-          <Header earnings={earnings} isKidsMode={isKidsMode} profile={activeProfile} onCashOut={handleCashOut} onShowHistory={handleShowHistory} isCashOutDisabled={isCashOutDisabled} showCashOutButton={showCashOutButton} title={kidsModeTitle} />
+          <Header
+            earnings={earnings}
+            isKidsMode={isKidsMode}
+            profile={activeProfile}
+            onCashOut={handleCashOut}
+            onShowHistory={handleShowHistory}
+            isCashOutDisabled={isCashOutDisabled}
+            showCashOutButton={showCashOutButton}
+            // Pass view mode state and handlers to Header for parent mode
+            viewMode={viewMode}
+            setViewMode={setViewMode}
+            weeklyTitle={weeklyTitle}
+            isToday={isToday}
+            selectedDate={selectedDate}
+            setSelectedDate={setSelectedDate}
+            currentWeekDays={currentWeekDays}
+            handlePreviousWeek={handlePreviousWeek}
+            handleNextWeek={handleNextWeek}
+            isViewingCurrentWeek={isViewingCurrentWeek}
+          />
         </header>
         
         <main>
-          {!isKidsMode && (
-            <div className="mb-6">
-              <div className="flex items-baseline gap-4">
-                 {viewMode === 'weekly' ? (
-                  <div className="flex items-center gap-2">
-                    <button onClick={handlePreviousWeek} className="p-1 rounded-full hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] transition-colors" aria-label="Previous week">
-                      <ChevronLeftIcon />
-                    </button>
-                    <h2 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)] whitespace-nowrap">
-                      {weeklyTitle}
-                    </h2>
-                    <button onClick={handleNextWeek} disabled={isViewingCurrentWeek} className="p-1 rounded-full hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Next week">
-                      <ChevronRightIcon />
-                    </button>
-                  </div>
-                ) : (
-                  <h2 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)] whitespace-nowrap">
-                    {isToday ? "Today's Chores" : `${selectedDate.toLocaleDateString('en-US', { weekday: 'long' })}'s Chores`}
-                  </h2>
-                )}
-
-                <div className="bg-[var(--bg-tertiary)] rounded-full p-1 flex items-center">
-                  <button onClick={() => setViewMode('weekly')} className={`px-4 py-1 text-sm font-semibold rounded-full transition-all duration-300 ${viewMode === 'weekly' ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)] shadow-md' : 'text-[var(--text-secondary)]'}`}>Weekly</button>
-                  <button onClick={() => setViewMode('daily')} className={`px-4 py-1 text-sm font-semibold rounded-full transition-all duration-300 ${viewMode === 'daily' ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)] shadow-md' : 'text-[var(--text-secondary)]'}`}>Daily</button>
-                </div>
-              </div>
-            </div>
-          )}
-          
             {!isKidsMode && profiles.length > 1 && (
                 <div className="mb-6 p-3 bg-[var(--bg-tertiary)] rounded-2xl">
                     <h3 className="text-sm font-semibold text-[var(--text-secondary)] mb-2 text-center">Managing Chores For</h3>
@@ -704,20 +703,6 @@ const App: React.FC = () => {
                   <span>Add Chore</span>
                 </button>
               </div>
-            )}
-          
-           {displayMode === 'daily' && !isKidsMode && (
-                <div className="mb-6 flex justify-center gap-1 p-2 rounded-xl bg-[var(--bg-tertiary)]">
-                    {currentWeekDays.map(date => {
-                        const dayString = formatDate(date);
-                        const isSelected = dayString === formatDate(selectedDate);
-                        return (
-                            <button key={dayString} onClick={() => setSelectedDate(date)} className={`w-full py-2 rounded-lg text-sm font-semibold transition-all duration-300 ${isSelected ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)] shadow-md' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]'}`}>
-                                {date.toLocaleDateString('en-US', { weekday: 'short' })}
-                            </button>
-                        );
-                    })}
-                </div>
             )}
           
           <ChoreList chores={filteredChores} currentWeekDays={currentWeekDays} onToggleCompletion={handleToggleCompletion} onDeleteChore={isKidsMode ? undefined : handleDeleteChore} onEditChore={isKidsMode ? undefined : handleOpenEditModal} viewMode={displayMode} selectedDate={selectedDate} isKidsMode={isKidsMode} onReorderChores={isKidsMode ? undefined : handleReorderChores} />

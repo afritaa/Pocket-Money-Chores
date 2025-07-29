@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pocket-money-cache-v3';
+const CACHE_NAME = 'pocket-money-cache-v4';
 
 self.addEventListener('install', event => {
   // Perform install steps. We will cache on the fly.

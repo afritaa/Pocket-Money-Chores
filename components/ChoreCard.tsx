@@ -72,7 +72,7 @@ const ChoreCard: React.FC<ChoreCardProps> = ({
       onDragLeave={isDraggable ? handleDragLeave : undefined}
       onDrop={isDraggable ? handleDrop : undefined}
     >
-      <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl p-5 transition-all duration-300 flex items-center gap-4 shadow-lg" style={{'--shadow-color': 'var(--shadow-color)'} as React.CSSProperties}>
+      <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl p-4 sm:p-5 transition-all duration-300 flex items-center gap-4 shadow-lg" style={{'--shadow-color': 'var(--shadow-color)'} as React.CSSProperties}>
         
         {isDraggable && <DragHandleIcon />}
 
@@ -86,68 +86,88 @@ const ChoreCard: React.FC<ChoreCardProps> = ({
           </div>
         )}
 
-        <div className="flex-grow text-[var(--text-primary)]">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="text-xl font-semibold text-[var(--text-primary)]">{chore.name}</h3>
-                <p className="text-lg font-bold text-[var(--success)]">${chore.value.toFixed(2)}</p>
-              </div>
-              <div className="flex items-center space-x-1">
-                {onEditChore && (
-                  <button onClick={() => onEditChore(chore)} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors p-2 rounded-full hover:bg-[var(--bg-tertiary)]" aria-label={`Edit chore: ${chore.name}`}>
-                    <PencilIcon />
-                  </button>
-                )}
-                {onDeleteChore && (
-                  <button onClick={() => onDeleteChore(chore.id)} className="text-[var(--text-secondary)] hover:text-[var(--danger)] transition-colors p-2 rounded-full hover:bg-[var(--bg-tertiary)]" aria-label={`Delete chore: ${chore.name}`}>
-                    <TrashIcon />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {viewMode === 'weekly' ? (
-              <div className="flex justify-between gap-1 bg-[var(--bg-tertiary)] p-2 rounded-xl">
-                {currentWeekDays.map(date => {
-                  const dayOfWeek = getDayFromDate(date);
-                  const isAssigned = chore.days.includes(dayOfWeek);
-                  const isCompleted = chore.completions[formatDate(date)] === true;
-                  const isCurrent = date.getTime() === today.getTime();
-                  const isPast = date.getTime() < today.getTime();
-
-                  return (
-                    <DayButton key={date.getTime()} day={dayOfWeek} isAssigned={isAssigned} isCompleted={isCompleted} isToday={isCurrent} isPast={isPast} isKidsMode={isKidsMode}
-                      onClick={() => { if (isAssigned) onToggleCompletion(chore.id, date); }}
-                    />
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="mt-4">
-                <div className="relative">
-                  <button onClick={handleCompleteClick} disabled={isSelectedDateInPast && isKidsMode}
-                    className={`w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl text-lg font-bold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-px ${
-                      isCompletedOnSelectedDate 
-                        ? 'bg-[var(--success)] text-[var(--success-text)]' 
-                        : 'bg-[var(--accent-primary)] hover:bg-[var(--accent-secondary)] text-[var(--accent-primary-text)]'
-                    } disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-lg`}
-                  >
-                    <CheckIcon className="h-5 w-5"/>
-                    {isCompletedOnSelectedDate ? 'Completed!' : 'Mark as Done'}
-                  </button>
-                   {isCelebrating && (
-                    <div className="absolute inset-0 pointer-events-none">
-                      {Array.from({ length: 15 }).map((_, i) => (
-                        <div key={i} className={`particle-container particle-container-${i}`}>
-                          <div className="particle" />
-                        </div>
-                      ))}
-                    </div>
-                  )}
+        {viewMode === 'weekly' ? (
+            <div className="flex-grow text-[var(--text-primary)]">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-xl font-semibold text-[var(--text-primary)]">{chore.name}</h3>
+                    <p className="text-lg font-bold text-[var(--success)]">${chore.value.toFixed(2)}</p>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    {onEditChore && (
+                      <button onClick={() => onEditChore(chore)} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors p-2 rounded-full hover:bg-[var(--bg-tertiary)]" aria-label={`Edit chore: ${chore.name}`}>
+                        <PencilIcon />
+                      </button>
+                    )}
+                    {onDeleteChore && (
+                      <button onClick={() => onDeleteChore(chore.id)} className="text-[var(--text-secondary)] hover:text-[var(--danger)] transition-colors p-2 rounded-full hover:bg-[var(--bg-tertiary)]" aria-label={`Delete chore: ${chore.name}`}>
+                        <TrashIcon />
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
-        </div>
+                <div className="flex justify-between gap-1 bg-[var(--bg-tertiary)] p-2 rounded-xl">
+                    {currentWeekDays.map(date => {
+                    const dayOfWeek = getDayFromDate(date);
+                    const isAssigned = chore.days.includes(dayOfWeek);
+                    const isCompleted = chore.completions[formatDate(date)] === true;
+                    const isCurrent = date.getTime() === today.getTime();
+                    const isPast = date.getTime() < today.getTime();
+
+                    return (
+                        <DayButton key={date.getTime()} day={dayOfWeek} isAssigned={isAssigned} isCompleted={isCompleted} isToday={isCurrent} isPast={isPast} isKidsMode={isKidsMode}
+                        onClick={() => { if (isAssigned) onToggleCompletion(chore.id, date); }}
+                        />
+                    );
+                    })}
+                </div>
+            </div>
+        ) : (
+            <>
+                <div className="flex-grow">
+                    <h3 className="text-xl font-semibold text-[var(--text-primary)]">{chore.name}</h3>
+                    <p className="text-lg font-bold text-[var(--success)]">${chore.value.toFixed(2)}</p>
+                </div>
+
+                {!isKidsMode && (
+                    <div className="flex-shrink-0 flex items-center space-x-1">
+                        {onEditChore && (
+                            <button onClick={() => onEditChore(chore)} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors p-2 rounded-full hover:bg-[var(--bg-tertiary)]" aria-label={`Edit chore: ${chore.name}`}>
+                                <PencilIcon />
+                            </button>
+                        )}
+                        {onDeleteChore && (
+                            <button onClick={() => onDeleteChore(chore.id)} className="text-[var(--text-secondary)] hover:text-[var(--danger)] transition-colors p-2 rounded-full hover:bg-[var(--bg-tertiary)]" aria-label={`Delete chore: ${chore.name}`}>
+                                <TrashIcon />
+                            </button>
+                        )}
+                    </div>
+                )}
+                <div className="relative flex-shrink-0">
+                    <button
+                        onClick={handleCompleteClick}
+                        disabled={isSelectedDateInPast && isKidsMode}
+                        className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 transform hover:-translate-y-px active:scale-95 ${
+                        isCompletedOnSelectedDate 
+                            ? 'bg-[var(--success)] text-[var(--success-text)] shadow-lg' 
+                            : 'bg-[var(--bg-tertiary)] hover:bg-[var(--border-primary)]'
+                        } disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none`}
+                        aria-label={isCompletedOnSelectedDate ? 'Mark as incomplete' : 'Mark as complete'}
+                    >
+                        {isCompletedOnSelectedDate && <CheckIcon className="w-8 h-8" />}
+                    </button>
+                    {isCelebrating && (
+                        <div className="absolute inset-0 pointer-events-none flex justify-center items-center">
+                        {Array.from({ length: 15 }).map((_, i) => (
+                            <div key={i} className={`particle-container particle-container-${i}`}>
+                            <div className="particle" />
+                            </div>
+                        ))}
+                        </div>
+                    )}
+                </div>
+            </>
+        )}
       </div>
        <style>
         {`
