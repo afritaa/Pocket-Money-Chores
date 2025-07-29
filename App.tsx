@@ -5,7 +5,7 @@ import { Chore, Day, EarningsRecord, Profile, ChoreCategory, ParentSettings } fr
 import Header from './components/Header';
 import ChoreList from './components/ChoreList';
 import ChoreFormModal from './components/AddChoreModal';
-import { PlusIcon, CHORE_CATEGORY_ORDER, UserCircleIcon } from './constants';
+import { PlusIcon, CHORE_CATEGORY_ORDER, UserCircleIcon, ChevronLeftIcon, ChevronRightIcon } from './constants';
 import EarningsHistoryModal from './components/EarningsHistoryModal';
 import MenuBanner from './components/MenuBanner';
 import PendingCashOutsModal from './components/PendingCashOutsModal';
@@ -592,6 +592,44 @@ const App: React.FC = () => {
   
   const kidsModeTitle = isKidsMode ? (isToday ? "Today's Chores" : `${selectedDate.toLocaleDateString('en-US', { weekday: 'long' })}'s Chores`) : undefined;
 
+  const handlePreviousWeek = () => {
+    setCurrentDate(prevDate => {
+      const newDate = new Date(prevDate);
+      newDate.setDate(newDate.getDate() - 7);
+      return newDate;
+    });
+  };
+
+  const handleNextWeek = () => {
+    setCurrentDate(prevDate => {
+      const newDate = new Date(prevDate);
+      newDate.setDate(newDate.getDate() + 7);
+      return newDate;
+    });
+  };
+  
+  const isViewingCurrentWeek = useMemo(() => {
+    const today = new Date();
+    const startOfThisWeek = getStartOfWeek(today);
+    const startOfViewingWeek = getStartOfWeek(currentDate);
+    return formatDate(startOfThisWeek) === formatDate(startOfViewingWeek);
+  }, [currentDate]);
+
+  const weeklyTitle = useMemo(() => {
+    if (isViewingCurrentWeek) {
+      return "This Week's Chores";
+    }
+    const start = currentWeekDays[0];
+    const end = currentWeekDays[6];
+    const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
+    const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
+
+    if (startMonth === endMonth) {
+      return `${startMonth} ${start.getDate()} - ${end.getDate()}`;
+    }
+    return `${startMonth} ${start.getDate()} - ${endMonth} ${end.getDate()}`;
+  }, [currentWeekDays, isViewingCurrentWeek]);
+
 
   if (!hasCompletedOnboarding) {
       return (
@@ -615,9 +653,24 @@ const App: React.FC = () => {
           {!isKidsMode && (
             <div className="mb-6">
               <div className="flex items-baseline gap-4">
-                <h2 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)] whitespace-nowrap">
-                    {displayMode === 'weekly' ? "This Week's Chores" : isToday ? "Today's Chores" : `${selectedDate.toLocaleDateString('en-US', { weekday: 'long' })}'s Chores`}
-                </h2>
+                 {viewMode === 'weekly' ? (
+                  <div className="flex items-center gap-2">
+                    <button onClick={handlePreviousWeek} className="p-1 rounded-full hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] transition-colors" aria-label="Previous week">
+                      <ChevronLeftIcon />
+                    </button>
+                    <h2 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)] whitespace-nowrap">
+                      {weeklyTitle}
+                    </h2>
+                    <button onClick={handleNextWeek} disabled={isViewingCurrentWeek} className="p-1 rounded-full hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Next week">
+                      <ChevronRightIcon />
+                    </button>
+                  </div>
+                ) : (
+                  <h2 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)] whitespace-nowrap">
+                    {isToday ? "Today's Chores" : `${selectedDate.toLocaleDateString('en-US', { weekday: 'long' })}'s Chores`}
+                  </h2>
+                )}
+
                 <div className="bg-[var(--bg-tertiary)] rounded-full p-1 flex items-center">
                   <button onClick={() => setViewMode('weekly')} className={`px-4 py-1 text-sm font-semibold rounded-full transition-all duration-300 ${viewMode === 'weekly' ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)] shadow-md' : 'text-[var(--text-secondary)]'}`}>Weekly</button>
                   <button onClick={() => setViewMode('daily')} className={`px-4 py-1 text-sm font-semibold rounded-full transition-all duration-300 ${viewMode === 'daily' ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)] shadow-md' : 'text-[var(--text-secondary)]'}`}>Daily</button>
