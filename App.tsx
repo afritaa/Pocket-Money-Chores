@@ -277,7 +277,7 @@ const App: React.FC = () => {
         if (todaysChores.length === 0) return;
         const areAllDoneNow = todaysChores.every(c => c.completions[todayString]);
         if (areAllDoneNow) {
-            const todayEarnings = todaysChores.reduce((sum, chore) => sum + chore.value, 0);
+            const todayEarnings = todaysChores.reduce((sum, chore) => chore.completions[todayString] ? sum + chore.value : sum, 0);
             setDailyEarningsForModal(todayEarnings);
             setIsAllChoresDoneModalOpen(true);
         }
@@ -437,16 +437,15 @@ const App: React.FC = () => {
     });
   }, [currentDate]);
   
-  const weeklyTotal = useMemo(() => {
-    const weekDateStrings = currentWeekDays.map(formatDate);
+  const earnings = useMemo(() => {
     return chores.reduce((total, chore) => {
-      const choreTotal = Object.entries(chore.completions).reduce((sum, [date, completed]) => {
-        if (completed && weekDateStrings.includes(date)) return sum + chore.value;
+      const choreTotal = Object.values(chore.completions).reduce((sum, completed) => {
+        if (completed) return sum + chore.value;
         return sum;
       }, 0);
       return total + choreTotal;
     }, 0);
-  }, [chores, currentWeekDays]);
+  }, [chores]);
 
   const displayMode = isKidsMode ? 'daily' : viewMode;
 
@@ -536,22 +535,23 @@ const App: React.FC = () => {
   }, [setChoresByProfile, isKidsMode, activeProfileId]);
 
   const handleCashOut = useCallback(() => {
-    if (weeklyTotal <= 0 || !activeProfileId) return;
-    const newRecord: EarningsRecord = { id: Date.now().toString(), date: formatDate(new Date()), amount: weeklyTotal };
-    setPendingCashOutsByProfile(prev => ({ ...prev, [activeProfileId]: [...(prev[activeProfileId] || []), newRecord] }));
-    if (isKidsMode) { setCashedOutAmount(weeklyTotal); setIsCashOutConfirmOpen(true); }
+    if (earnings <= 0 || !activeProfileId) return;
+    const newRecord: EarningsRecord = { id: Date.now().toString(), date: formatDate(new Date()), amount: earnings };
     
-    const weekDateStrings = currentWeekDays.map(formatDate);
+    setPendingCashOutsByProfile(prev => ({ ...prev, [activeProfileId]: [...(prev[activeProfileId] || []), newRecord] }));
+    
+    if (isKidsMode) { 
+        setCashedOutAmount(earnings); 
+        setIsCashOutConfirmOpen(true); 
+    }
+    
+    // Reset ALL completions for the active profile
     setChoresByProfile(prev => {
         const currentChores = prev[activeProfileId] || [];
-        const updatedChores = currentChores.map(chore => {
-            const newCompletions = { ...chore.completions };
-            for (const dateStr of weekDateStrings) delete newCompletions[dateStr];
-            return { ...chore, completions: newCompletions };
-        });
+        const updatedChores = currentChores.map(chore => ({ ...chore, completions: {} }));
         return { ...prev, [activeProfileId]: updatedChores };
     });
-  }, [weeklyTotal, currentWeekDays, isKidsMode, setChoresByProfile, setPendingCashOutsByProfile, activeProfileId]);
+  }, [earnings, isKidsMode, setChoresByProfile, setPendingCashOutsByProfile, activeProfileId]);
 
   const handleShowHistory = () => setIsHistoryModalOpen(true);
   const handleCloseHistoryModal = () => setIsHistoryModalOpen(false);
@@ -578,10 +578,10 @@ const App: React.FC = () => {
   const showCashOutButton = useMemo(() => {
     if (!isKidsMode) return true;
     if (activeProfile?.payDay) return getDayFromDate(new Date()) === activeProfile.payDay;
-    return true;
+    return true; // If no pay day is set, allow cash out anytime
   }, [isKidsMode, activeProfile]);
 
-  const isCashOutDisabled = useMemo(() => weeklyTotal <= 0, [weeklyTotal]);
+  const isCashOutDisabled = useMemo(() => earnings <= 0, [earnings]);
 
   useEffect(() => {
     // This effect ensures the app shows the welcome modal if all profiles are deleted.
@@ -646,7 +646,7 @@ const App: React.FC = () => {
       <div className={`container mx-auto p-4 sm:p-6 md:p-8 transition-all duration-300 ${isWelcomeModalOpen ? 'blur-sm' : ''}`}>
         <header>
           <MenuBanner isKidsMode={isKidsMode} onSwitchToChild={handleSwitchToChild} onAttemptSwitchToParentMode={handleAttemptSwitchToParentMode} pendingCount={pendingCashOuts.length} onShowPending={handleOpenPendingModal} profiles={profiles} activeProfileId={activeProfileId} onEditProfile={handleOpenEditModalForProfile} onShowParentPasscode={() => setIsParentPasscodeModalOpen(true)} onShowAddChildModal={() => setIsAddChildModalOpen(true)} onShowThemeModal={() => setIsThemeModalOpen(true)} />
-          <Header weeklyTotal={weeklyTotal} isKidsMode={isKidsMode} profile={activeProfile} onCashOut={handleCashOut} onShowHistory={handleShowHistory} isCashOutDisabled={isCashOutDisabled} showCashOutButton={showCashOutButton} title={kidsModeTitle} />
+          <Header earnings={earnings} isKidsMode={isKidsMode} profile={activeProfile} onCashOut={handleCashOut} onShowHistory={handleShowHistory} isCashOutDisabled={isCashOutDisabled} showCashOutButton={showCashOutButton} title={kidsModeTitle} />
         </header>
         
         <main>

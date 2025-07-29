@@ -3,7 +3,7 @@ import { CoinIcon, HistoryIcon, UserCircleIcon } from '../constants';
 import { Profile } from '../types';
 
 interface HeaderProps {
-  weeklyTotal: number;
+  earnings: number;
   isKidsMode: boolean;
   profile: Profile | null | undefined;
   onCashOut: () => void;
@@ -21,30 +21,30 @@ const usePrevious = <T,>(value: T): T | undefined => {
   return ref.current;
 };
 
-const Header: React.FC<HeaderProps> = ({ weeklyTotal, isKidsMode, profile, onCashOut, onShowHistory, isCashOutDisabled, showCashOutButton, title }) => {
+const Header: React.FC<HeaderProps> = ({ earnings, isKidsMode, profile, onCashOut, onShowHistory, isCashOutDisabled, showCashOutButton, title }) => {
   const [showFireworks, setShowFireworks] = useState(false);
-  const [displayTotal, setDisplayTotal] = useState(weeklyTotal);
-  const prevWeeklyTotal = usePrevious(weeklyTotal);
+  const [displayTotal, setDisplayTotal] = useState(earnings);
+  const prevEarnings = usePrevious(earnings);
 
   const earningsRef = useRef<HTMLDivElement>(null);
   const [isEarningsFloating, setIsEarningsFloating] = useState(false);
 
 
   useEffect(() => {
-    if (prevWeeklyTotal !== undefined && weeklyTotal > prevWeeklyTotal) {
+    if (prevEarnings !== undefined && earnings > prevEarnings) {
       setShowFireworks(true);
       // Animate the number
-      const diff = weeklyTotal - prevWeeklyTotal;
+      const diff = earnings - prevEarnings;
       const duration = 500; // ms
       const stepTime = 20; // ms
       const steps = duration / stepTime;
       const increment = diff / steps;
       
-      let current = prevWeeklyTotal;
+      let current = prevEarnings;
       const timer = setInterval(() => {
         current += increment;
-        if (current >= weeklyTotal) {
-          setDisplayTotal(weeklyTotal);
+        if (current >= earnings) {
+          setDisplayTotal(earnings);
           clearInterval(timer);
         } else {
           setDisplayTotal(current);
@@ -58,9 +58,9 @@ const Header: React.FC<HeaderProps> = ({ weeklyTotal, isKidsMode, profile, onCas
       return () => clearInterval(timer);
     } else {
       // No animation, just update the number
-      setDisplayTotal(weeklyTotal);
+      setDisplayTotal(earnings);
     }
-  }, [weeklyTotal, prevWeeklyTotal]);
+  }, [earnings, prevEarnings]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -105,7 +105,7 @@ const Header: React.FC<HeaderProps> = ({ weeklyTotal, isKidsMode, profile, onCas
        )}
        <CoinIcon />
        <div className="text-left">
-           <div className="text-sm font-medium text-[var(--text-secondary)]">Weekly Earnings</div>
+           <div className="text-sm font-medium text-[var(--text-secondary)]">Earnings</div>
            <div className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
                <span>$</span>{displayTotal.toFixed(2)}
            </div>
