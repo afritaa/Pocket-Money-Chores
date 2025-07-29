@@ -162,6 +162,17 @@ const Header: React.FC<HeaderProps> = ({
             >
               {earningsContent}
           </div>
+           {showCashOutButton && (
+              <div className="w-full flex justify-center mt-2 animate-fade-in-fast">
+                <button 
+                    onClick={onCashOut}
+                    disabled={isCashOutDisabled}
+                    className="w-full max-w-xs bg-[var(--success)] hover:opacity-80 text-[var(--success-text)] font-bold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-px transition-all disabled:bg-[var(--bg-tertiary)] disabled:text-[var(--text-tertiary)] disabled:shadow-none disabled:cursor-not-allowed disabled:transform-none"
+                >
+                    Cash Out
+                </button>
+              </div>
+          )}
         </div>
       ) : (
         <>
@@ -254,6 +265,8 @@ const Header: React.FC<HeaderProps> = ({
           .animate-fireworks-burst {
               animation: fireworks-burst 0.8s ease-out forwards;
           }
+           @keyframes fade-in-fast { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+          .animate-fade-in-fast { animation: fade-in-fast 0.3s ease-out forwards; }
       `}</style>
        {isEarningsFloating && (
         <div className="fixed top-4 right-4 sm:right-6 md:right-8 z-30 bg-[var(--bg-secondary)] backdrop-blur-sm shadow-xl border border-[var(--border-primary)] rounded-2xl animate-fade-in-fast">
