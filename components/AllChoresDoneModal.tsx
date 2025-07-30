@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 interface AllChoresDoneModalProps {
@@ -33,7 +34,7 @@ const AllChoresDoneModal: React.FC<AllChoresDoneModalProps> = ({ isOpen, onClose
         </div>
         <h2 className="text-3xl font-bold mb-4">Well Done!</h2>
         <p className="text-lg text-[var(--text-secondary)] mb-6">
-          You’ve finished all of today’s chores! You have earned <span className="font-bold text-[var(--success)]">${dailyAmount.toFixed(2)}</span> today.
+          You’ve finished all of today’s chores! You have earned <span className="font-bold text-[var(--success)]">${(dailyAmount / 100).toFixed(2)}</span> today.
         </p>
         <button
           onClick={onClose}

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { EarningsRecord } from '../types';
 
@@ -5,16 +6,14 @@ interface PendingCashOutsModalProps {
   isOpen: boolean;
   onClose: () => void;
   pendingCashOuts: EarningsRecord[];
-  onApprove: (recordId: string) => void;
-  onApproveAll: () => void;
+  onOpenReview: (record: EarningsRecord) => void;
 }
 
 const PendingCashOutsModal: React.FC<PendingCashOutsModalProps> = ({
   isOpen,
   onClose,
   pendingCashOuts,
-  onApprove,
-  onApproveAll
+  onOpenReview,
 }) => {
   if (!isOpen) return null;
 
@@ -41,28 +40,18 @@ const PendingCashOutsModal: React.FC<PendingCashOutsModalProps> = ({
                       {new Date(record.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })}
                     </span>
                     <span className="font-bold text-lg text-[var(--success)] ml-4">
-                      ${record.amount.toFixed(2)}
+                      ${(record.amount / 100).toFixed(2)}
                     </span>
                   </div>
                   <button
-                    onClick={() => onApprove(record.id)}
+                    onClick={() => onOpenReview(record)}
                     className="px-4 py-1 rounded-lg text-sm text-[var(--success-text)] bg-[var(--success)] hover:opacity-80 font-semibold shadow-md transition-all"
                   >
-                    Approve
+                    Review & Approve
                   </button>
                 </li>
               ))}
             </ul>
-            {pendingCashOuts.length > 1 && (
-              <div className="flex justify-end pt-4 border-t border-[var(--border-primary)]">
-                <button
-                  onClick={onApproveAll}
-                  className="px-6 py-2 rounded-lg text-[var(--accent-primary-text)] bg-[var(--accent-primary)] hover:bg-[var(--accent-secondary)] font-semibold shadow-lg transition-all"
-                >
-                  Approve All
-                </button>
-              </div>
-            )}
           </div>
         )}
 

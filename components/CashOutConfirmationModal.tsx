@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 
 interface CashOutConfirmationModalProps {
@@ -49,7 +50,7 @@ const CashOutConfirmationModal: React.FC<CashOutConfirmationModalProps> = ({ isO
         </div>
         <h2 className="text-3xl font-bold mb-4">Well Done!</h2>
         <p className="text-lg text-[var(--text-secondary)] mb-6">
-          You've cashed out <span className="font-bold text-[var(--success)]">${amount.toFixed(2)}</span>!
+          You've cashed out <span className="font-bold text-[var(--success)]">${(amount / 100).toFixed(2)}</span>!
         </p>
         <p className="text-sm text-[var(--text-tertiary)] mb-8">
             Your earnings are now waiting for approval.

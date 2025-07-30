@@ -1,5 +1,7 @@
+
+
 import React from 'react';
-import { Chore, ChoreCategory } from '../types';
+import { Chore, ChoreCategory, PastChoreApproval } from '../types';
 import ChoreCard from './ChoreCard';
 import { CHORE_CATEGORY_ORDER } from '../constants';
 
@@ -7,15 +9,33 @@ interface ChoreListProps {
   chores: Chore[];
   currentWeekDays: Date[];
   onToggleCompletion: (choreId: string, date: Date) => void;
-  onDeleteChore?: (choreId: string) => void;
   onEditChore?: (chore: Chore) => void;
   onReorderChores?: (draggedChoreId: string, targetChoreId: string) => void;
   viewMode: 'weekly' | 'daily';
   selectedDate: Date;
   isKidsMode: boolean;
+  pastChoreApprovals: PastChoreApproval[];
+  onApprovePastChore?: (approvalId: string) => void;
+  draggingChoreId: string | null;
+  dragOverChoreId: string | null;
+  onDragStartTouch: (e: React.TouchEvent, choreId: string) => void;
 }
 
-const ChoreList: React.FC<ChoreListProps> = ({ chores, currentWeekDays, onToggleCompletion, onDeleteChore, onEditChore, onReorderChores, viewMode, selectedDate, isKidsMode }) => {
+const ChoreList: React.FC<ChoreListProps> = ({ 
+  chores, 
+  currentWeekDays, 
+  onToggleCompletion, 
+  onEditChore, 
+  onReorderChores, 
+  viewMode, 
+  selectedDate, 
+  isKidsMode, 
+  pastChoreApprovals, 
+  onApprovePastChore,
+  draggingChoreId,
+  dragOverChoreId,
+  onDragStartTouch
+}) => {
   
   if (chores.length === 0) {
     return (
@@ -63,12 +83,16 @@ const ChoreList: React.FC<ChoreListProps> = ({ chores, currentWeekDays, onToggle
                   chore={chore}
                   currentWeekDays={currentWeekDays}
                   onToggleCompletion={onToggleCompletion}
-                  onDeleteChore={onDeleteChore}
                   onEditChore={onEditChore}
                   onReorderChores={onReorderChores}
                   viewMode={viewMode}
                   selectedDate={selectedDate}
                   isKidsMode={isKidsMode}
+                  pastChoreApprovals={pastChoreApprovals}
+                  onApprovePastChore={onApprovePastChore}
+                  draggingChoreId={draggingChoreId}
+                  dragOverChoreId={dragOverChoreId}
+                  onDragStartTouch={onDragStartTouch}
                 />
               ))}
             </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Day, Profile } from '../types';
+import { Day, Profile, PayDayConfig } from '../types';
 import { DAYS_OF_WEEK, UserCircleIcon } from '../constants';
 
 interface AddChildModalProps {
@@ -32,7 +32,11 @@ const AddChildModal: React.FC<AddChildModalProps> = ({ isOpen, onClose, onSave }
       setError("Child's name is required.");
       return;
     }
-    onSave({ name: name.trim(), image, payDay });
+    const payDayConfig: PayDayConfig = payDay
+      ? { mode: 'manual', day: payDay }
+      : { mode: 'anytime' };
+      
+    onSave({ name: name.trim(), image, payDayConfig });
     // Reset form for next time
     setName('');
     setImage(null);

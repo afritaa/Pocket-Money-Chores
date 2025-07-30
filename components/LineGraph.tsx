@@ -1,9 +1,15 @@
+
 import React, { useState, useMemo, useRef } from 'react';
 import { GraphDataPoint } from '../types';
 
 interface LineGraphProps {
   data: GraphDataPoint[];
 }
+
+const parseLocalDate = (dateString: string): Date => {
+    const [year, month, day] = dateString.split('-').map(Number);
+    return new Date(year, month - 1, day);
+};
 
 const LineGraph: React.FC<LineGraphProps> = ({ data }) => {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -19,7 +25,7 @@ const LineGraph: React.FC<LineGraphProps> = ({ data }) => {
   const { xScale, yScale, linePath, areaPath, ticksY, ticksX, maxValue } = useMemo(() => {
     if (data.length < 2) return { xScale: null, yScale: null, linePath: '', areaPath: '', ticksY: [], ticksX: [], maxValue: 0 };
     
-    const dates = data.map(d => new Date(d.date).getTime());
+    const dates = data.map(d => parseLocalDate(d.date).getTime());
     const minDate = Math.min(...dates);
     const maxDate = Math.max(...dates);
 
@@ -33,17 +39,17 @@ const LineGraph: React.FC<LineGraphProps> = ({ data }) => {
       margin.top + innerHeight - (value / maxValue) * innerHeight;
 
     const lineGenerator = (points: GraphDataPoint[]) => {
-      let path = `M ${xScale(new Date(points[0].date))} ${yScale(points[0].total)}`;
+      let path = `M ${xScale(parseLocalDate(points[0].date))} ${yScale(points[0].total)}`;
       points.slice(1).forEach(p => {
-        path += ` L ${xScale(new Date(p.date))} ${yScale(p.total)}`;
+        path += ` L ${xScale(parseLocalDate(p.date))} ${yScale(p.total)}`;
       });
       return path;
     };
 
     const areaGenerator = (points: GraphDataPoint[]) => {
         let path = lineGenerator(points);
-        path += ` L ${xScale(new Date(points[points.length - 1].date))} ${yScale(0)}`;
-        path += ` L ${xScale(new Date(points[0].date))} ${yScale(0)}`;
+        path += ` L ${xScale(parseLocalDate(points[points.length - 1].date))} ${yScale(0)}`;
+        path += ` L ${xScale(parseLocalDate(points[0].date))} ${yScale(0)}`;
         path += ' Z';
         return path;
     };
@@ -65,10 +71,10 @@ const LineGraph: React.FC<LineGraphProps> = ({ data }) => {
       const step = Math.floor((data.length -1) / (tickCountX -1)) || 1;
       for (let i = 0; i < data.length; i += step) {
         const d = data[i];
-        if (d) ticksX.push({ date: new Date(d.date), x: xScale(new Date(d.date)) });
+        if (d) ticksX.push({ date: parseLocalDate(d.date), x: xScale(parseLocalDate(d.date)) });
       }
-      if (!ticksX.find(t => t.date.getTime() === new Date(data[data.length-1].date).getTime())) {
-         ticksX.push({ date: new Date(data[data.length-1].date), x: xScale(new Date(data[data.length-1].date)) });
+      if (!ticksX.find(t => t.date.getTime() === parseLocalDate(data[data.length-1].date).getTime())) {
+         ticksX.push({ date: parseLocalDate(data[data.length-1].date), x: xScale(parseLocalDate(data[data.length-1].date)) });
       }
     }
 
@@ -86,7 +92,7 @@ const LineGraph: React.FC<LineGraphProps> = ({ data }) => {
     let minDistance = Infinity;
 
     data.forEach(d => {
-      const pointX = xScale(new Date(d.date));
+      const pointX = xScale(parseLocalDate(d.date));
       const distance = Math.abs(svgX - pointX);
       if (distance < minDistance) {
         minDistance = distance;
@@ -97,7 +103,7 @@ const LineGraph: React.FC<LineGraphProps> = ({ data }) => {
     if (closestPoint) {
       setActivePoint(closestPoint);
       setTooltipPosition({
-        x: xScale(new Date(closestPoint.date)),
+        x: xScale(parseLocalDate(closestPoint.date)),
         y: yScale(closestPoint.total)
       });
     }
@@ -110,7 +116,7 @@ const LineGraph: React.FC<LineGraphProps> = ({ data }) => {
   
   const formatDateTick = (date: Date) => {
     // Show month and day
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
 
@@ -132,7 +138,7 @@ const LineGraph: React.FC<LineGraphProps> = ({ data }) => {
             <g key={tick.value} transform={`translate(0, ${tick.y})`}>
               <line x1={margin.left} y1="0" x2={width - margin.right} y2="0" stroke="var(--border-primary)" strokeWidth="0.5" strokeDasharray="2,2"/>
               <text x={margin.left - 8} dy="0.32em" textAnchor="end" fill="currentColor">
-                ${Math.round(tick.value)}
+                ${Math.round(tick.value / 100)}
               </text>
             </g>
           ))}
@@ -171,7 +177,7 @@ const LineGraph: React.FC<LineGraphProps> = ({ data }) => {
                 <g transform="translate(0, -10)" className="pointer-events-none">
                     <rect x="-45" y="-30" width="90" height="25" rx="5" fill="var(--bg-secondary)" stroke="var(--border-secondary)" />
                     <text x="0" y="-17.5" textAnchor="middle" fill="var(--text-primary)" fontSize="12" fontWeight="bold">
-                        ${activePoint.total.toFixed(2)}
+                        ${(activePoint.total / 100).toFixed(2)}
                     </text>
                 </g>
             </g>

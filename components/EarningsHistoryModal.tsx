@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { EarningsRecord, GraphDataPoint } from '../types';
 import LineGraph from './LineGraph';
@@ -6,16 +7,22 @@ interface EarningsHistoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   history: EarningsRecord[];
+  onUpdateAmount: (recordId: string, newAmount: number) => void;
 }
 
 type Tab = 'History' | 'Totals' | 'Graph';
 type GraphPeriod = 'Month' | '3 Months' | '6 Months' | 'Year';
 
-const formatDate = (date: Date): string => date.toISOString().split('T')[0];
+const parseLocalDate = (dateString: string): Date => {
+    const [year, month, day] = dateString.split('-').map(Number);
+    return new Date(year, month - 1, day);
+};
 
-const EarningsHistoryModal: React.FC<EarningsHistoryModalProps> = ({ isOpen, onClose, history }) => {
+const EarningsHistoryModal: React.FC<EarningsHistoryModalProps> = ({ isOpen, onClose, history, onUpdateAmount }) => {
     const [activeTab, setActiveTab] = useState<Tab>('History');
     const [graphPeriod, setGraphPeriod] = useState<GraphPeriod>('Month');
+    const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
+    const [editValue, setEditValue] = useState<string>('');
 
     // Memoized calculation for the "Totals" tab
     const totals = useMemo(() => {
@@ -28,33 +35,24 @@ const EarningsHistoryModal: React.FC<EarningsHistoryModalProps> = ({ isOpen, onC
             year: 0
         };
 
-        // Start of week (Sunday)
         const startOfWeek = new Date(now);
         startOfWeek.setDate(now.getDate() - now.getDay());
         startOfWeek.setHours(0, 0, 0, 0);
-
-        // Start of month
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-        // Start of 3/6/12 months ago
         const threeMonthsAgo = new Date(now);
         threeMonthsAgo.setMonth(now.getMonth() - 3);
-
         const sixMonthsAgo = new Date(now);
         sixMonthsAgo.setMonth(now.getMonth() - 6);
-        
         const startOfYear = new Date(now.getFullYear(), 0, 1);
 
         for (const record of history) {
-            const recordDate = new Date(record.date);
-            
+            const recordDate = parseLocalDate(record.date);
             if (recordDate >= startOfWeek) totalsData.week += record.amount;
             if (recordDate >= startOfMonth) totalsData.month += record.amount;
             if (recordDate >= threeMonthsAgo) totalsData.threeMonths += record.amount;
             if (recordDate >= sixMonthsAgo) totalsData.sixMonths += record.amount;
             if (recordDate >= startOfYear) totalsData.year += record.amount;
         }
-
         return totalsData;
     }, [history]);
 
@@ -62,37 +60,37 @@ const EarningsHistoryModal: React.FC<EarningsHistoryModalProps> = ({ isOpen, onC
     const graphData = useMemo(() => {
         const now = new Date();
         let startDate = new Date();
-
         switch (graphPeriod) {
-            case 'Month':
-                startDate.setMonth(now.getMonth() - 1);
-                break;
-            case '3 Months':
-                startDate.setMonth(now.getMonth() - 3);
-                break;
-            case '6 Months':
-                startDate.setMonth(now.getMonth() - 6);
-                break;
-            case 'Year':
-                startDate.setFullYear(now.getFullYear() - 1);
-                break;
+            case 'Month': startDate.setMonth(now.getMonth() - 1); break;
+            case '3 Months': startDate.setMonth(now.getMonth() - 3); break;
+            case '6 Months': startDate.setMonth(now.getMonth() - 6); break;
+            case 'Year': startDate.setFullYear(now.getFullYear() - 1); break;
         }
-
-        const filteredHistory = history.filter(record => new Date(record.date) >= startDate);
-        
+        const filteredHistory = history.filter(record => parseLocalDate(record.date) >= startDate);
         const dailyTotals: Record<string, number> = {};
         for (const record of filteredHistory) {
-            const dateStr = formatDate(new Date(record.date)); // Ensure date is formatted correctly
-            dailyTotals[dateStr] = (dailyTotals[dateStr] || 0) + record.amount;
+            dailyTotals[record.date] = (dailyTotals[record.date] || 0) + record.amount;
         }
-
-        const dataPoints: GraphDataPoint[] = Object.entries(dailyTotals)
+        return Object.entries(dailyTotals)
             .map(([date, total]) => ({ date, total }))
-            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-            
-        return dataPoints;
-
+            .sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime());
     }, [history, graphPeriod]);
+
+    const handleEditClick = (record: EarningsRecord) => {
+        setEditingRecordId(record.id);
+        setEditValue((record.amount / 100).toFixed(2));
+    };
+
+    const handleSaveEdit = () => {
+        if (editingRecordId) {
+            const newAmountInCents = Math.round(parseFloat(editValue) * 100);
+            if (!isNaN(newAmountInCents)) {
+                onUpdateAmount(editingRecordId, newAmountInCents);
+            }
+            setEditingRecordId(null);
+            setEditValue('');
+        }
+    };
 
     if (!isOpen) return null;
 
@@ -106,13 +104,31 @@ const EarningsHistoryModal: React.FC<EarningsHistoryModalProps> = ({ isOpen, onC
                         ) : (
                             <ul className="space-y-3 max-h-[40vh] overflow-y-auto pr-2 -mr-2 custom-scrollbar">
                                 {[...history].reverse().map((record) => (
-                                    <li key={record.id} className="flex justify-between items-center bg-[var(--bg-tertiary)] p-4 rounded-lg border border-[var(--border-secondary)]">
+                                    <li key={record.id} className="flex justify-between items-center bg-[var(--bg-tertiary)] p-3 rounded-lg border border-[var(--border-secondary)]">
                                         <span className="font-medium text-[var(--text-secondary)]">
-                                            {new Date(record.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })}
+                                            {parseLocalDate(record.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
                                         </span>
-                                        <span className="font-bold text-lg text-[var(--success)]">
-                                            ${record.amount.toFixed(2)}
-                                        </span>
+                                        {editingRecordId === record.id ? (
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-bold text-lg text-[var(--success)]">$</span>
+                                                <input
+                                                    type="number"
+                                                    value={editValue}
+                                                    onChange={e => setEditValue(e.target.value)}
+                                                    autoFocus
+                                                    className="w-24 px-2 py-1 bg-[var(--bg-secondary)] border-[var(--border-primary)] border rounded-md focus:ring-2 focus:ring-[var(--accent-primary)] text-lg font-bold text-[var(--success)]"
+                                                />
+                                                <button onClick={handleSaveEdit} className="px-3 py-1 text-xs rounded-md bg-[var(--success)] text-[var(--success-text)]">Save</button>
+                                                <button onClick={() => setEditingRecordId(null)} className="px-3 py-1 text-xs rounded-md bg-[var(--bg-tertiary)] text-[var(--text-secondary)] border border-[var(--border-secondary)]">X</button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-3">
+                                                <span className="font-bold text-lg text-[var(--success)]">
+                                                    ${(record.amount / 100).toFixed(2)}
+                                                </span>
+                                                <button onClick={() => handleEditClick(record)} className="text-xs font-semibold px-3 py-1 rounded-md bg-[var(--bg-secondary)] hover:opacity-80 text-[var(--text-primary)] border border-[var(--border-primary)]">Edit</button>
+                                            </div>
+                                        )}
                                     </li>
                                 ))}
                             </ul>
@@ -124,23 +140,23 @@ const EarningsHistoryModal: React.FC<EarningsHistoryModalProps> = ({ isOpen, onC
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-center animate-fade-in-fast">
                         <div className="bg-[var(--bg-tertiary)] p-4 rounded-lg">
                             <p className="text-sm font-medium text-[var(--text-secondary)]">This Week</p>
-                            <p className="text-2xl font-bold text-[var(--text-primary)]">${totals.week.toFixed(2)}</p>
+                            <p className="text-2xl font-bold text-[var(--text-primary)]">${(totals.week / 100).toFixed(2)}</p>
                         </div>
                         <div className="bg-[var(--bg-tertiary)] p-4 rounded-lg">
                             <p className="text-sm font-medium text-[var(--text-secondary)]">This Month</p>
-                            <p className="text-2xl font-bold text-[var(--text-primary)]">${totals.month.toFixed(2)}</p>
+                            <p className="text-2xl font-bold text-[var(--text-primary)]">${(totals.month / 100).toFixed(2)}</p>
                         </div>
                         <div className="bg-[var(--bg-tertiary)] p-4 rounded-lg">
                             <p className="text-sm font-medium text-[var(--text-secondary)]">Last 3 Months</p>
-                            <p className="text-2xl font-bold text-[var(--text-primary)]">${totals.threeMonths.toFixed(2)}</p>
+                            <p className="text-2xl font-bold text-[var(--text-primary)]">${(totals.threeMonths / 100).toFixed(2)}</p>
                         </div>
                         <div className="bg-[var(--bg-tertiary)] p-4 rounded-lg">
                             <p className="text-sm font-medium text-[var(--text-secondary)]">Last 6 Months</p>
-                            <p className="text-2xl font-bold text-[var(--text-primary)]">${totals.sixMonths.toFixed(2)}</p>
+                            <p className="text-2xl font-bold text-[var(--text-primary)]">${(totals.sixMonths / 100).toFixed(2)}</p>
                         </div>
                          <div className="bg-[var(--bg-tertiary)] p-4 rounded-lg sm:col-span-2">
                             <p className="text-sm font-medium text-[var(--text-secondary)]">This Year</p>
-                            <p className="text-2xl font-bold text-[var(--text-primary)]">${totals.year.toFixed(2)}</p>
+                            <p className="text-2xl font-bold text-[var(--text-primary)]">${(totals.year / 100).toFixed(2)}</p>
                         </div>
                     </div>
                 );

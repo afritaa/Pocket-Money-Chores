@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Profile } from '../types';
-import { MenuIcon, UserCircleIcon, PencilIcon, PaintBrushIcon } from '../constants';
+import { MenuIcon, UserCircleIcon, PencilIcon, PaintBrushIcon, SettingsIcon, ExclamationIcon } from '../constants';
 
 interface MenuBannerProps {
   isKidsMode: boolean;
@@ -9,14 +9,16 @@ interface MenuBannerProps {
   onSwitchToChild: (profileId: string) => void;
   onAttemptSwitchToParentMode: () => void;
   pendingCount: number;
+  pastApprovalsCount: number;
   onShowPending: () => void;
+  onShowPastApprovals: () => void;
   onEditProfile: (profile: Profile) => void;
-  onShowParentPasscode: () => void;
+  onShowOptionsModal: () => void;
   onShowAddChildModal: () => void;
   onShowThemeModal: () => void;
 }
 
-const MenuBanner: React.FC<MenuBannerProps> = ({ isKidsMode, profiles, activeProfileId, onSwitchToChild, onAttemptSwitchToParentMode, pendingCount, onShowPending, onEditProfile, onShowParentPasscode, onShowAddChildModal, onShowThemeModal }) => {
+const MenuBanner: React.FC<MenuBannerProps> = ({ isKidsMode, profiles, activeProfileId, onSwitchToChild, onAttemptSwitchToParentMode, pendingCount, pastApprovalsCount, onShowPending, onShowPastApprovals, onEditProfile, onShowOptionsModal, onShowAddChildModal, onShowThemeModal }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const activeProfile = profiles.find(p => p.id === activeProfileId);
@@ -81,8 +83,9 @@ const MenuBanner: React.FC<MenuBannerProps> = ({ isKidsMode, profiles, activePro
               </div>
                {!isKidsMode && (
                 <div className="py-1 border-t border-[var(--border-primary)]">
-                  <button onClick={() => { onShowParentPasscode(); setIsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]">
-                      Parent Passcode
+                  <button onClick={() => { onShowOptionsModal(); setIsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] flex items-center gap-3">
+                      <SettingsIcon className="w-5 h-5 text-[var(--text-secondary)]" />
+                      <span>Options</span>
                   </button>
                 </div>
               )}
@@ -112,7 +115,7 @@ const MenuBanner: React.FC<MenuBannerProps> = ({ isKidsMode, profiles, activePro
       )}
 
       {/* RIGHT GROUP */}
-      <div className="flex items-center gap-2 sm:gap-6">
+      <div className="flex items-center gap-2 sm:gap-4">
         {!isKidsMode && pendingCount > 0 && (
            <button onClick={onShowPending} className="relative flex items-center gap-2 font-bold text-[var(--warning-text)] bg-[var(--warning)] py-2 px-3 sm:px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-px transition-all animate-fade-in text-sm sm:text-base">
             <span>Pending</span>
@@ -121,6 +124,18 @@ const MenuBanner: React.FC<MenuBannerProps> = ({ isKidsMode, profiles, activePro
               {pendingCount}
             </span>
           </button>
+        )}
+         {!isKidsMode && pastApprovalsCount > 0 && (
+            <button 
+                onClick={onShowPastApprovals} 
+                className="relative flex items-center justify-center p-2 rounded-full transition-all duration-300 bg-[var(--warning)] text-[var(--warning-text)] animate-pulse"
+                aria-label={`${pastApprovalsCount} past chores to approve`}
+            >
+                <ExclamationIcon className="h-6 w-6" />
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--danger)] text-xs font-bold text-white ring-2 ring-[var(--bg-secondary)]">
+                    {pastApprovalsCount}
+                </span>
+            </button>
         )}
         {isKidsMode && (
           <span className="font-bold text-lg hidden sm:inline animate-fade-in text-[var(--warning)]">

@@ -10,6 +10,7 @@ interface ThemeModalProps {
 const themes = [
   { id: 'light', name: 'Light', colors: { bg: '#f1f5f9', card: '#ffffff', accent: '#3b82f6', text: '#1e293b' } },
   { id: 'dark', name: 'Dark', colors: { bg: '#020617', card: '#0f172a', accent: '#38bdf8', text: '#f8fafc' } },
+  { id: 'dark-blue', name: 'Dark Blue', colors: { bg: '#0a192f', card: '#112240', accent: '#58a6ff', text: '#ccd6f6' } },
   { id: 'neon', name: 'Neon Glow', colors: { bg: '#0d0221', card: '#261447', accent: '#ff00ff', text: '#f0f8ff' } },
   { id: 'princess', name: 'Princess Pink', colors: { bg: 'linear-gradient(135deg, #fce4ec, #f3e5f5)', card: '#fff', accent: '#ff4081', text: '#4a148c' } },
   { id: 'ocean', name: 'Ocean Blue', colors: { bg: 'linear-gradient(to bottom, #ade8f4, #90e0ef)', card: 'rgba(255, 255, 255, 0.8)', accent: '#00b4d8', text: '#005f73' } },
