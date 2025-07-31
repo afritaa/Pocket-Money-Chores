@@ -1,6 +1,7 @@
 
 
 
+
 import React, { useState } from 'react';
 import { Chore, Day, PastChoreApproval } from '../types';
 import { CheckIcon, PencilIcon, DragHandleIcon, ExclamationIcon, CoinIcon, StarIcon } from '../constants';
@@ -45,7 +46,7 @@ const ChoreCard: React.FC<ChoreCardProps> = ({
   const [isCelebrating, setIsCelebrating] = useState(false);
   const [isMouseDragOver, setIsMouseDragOver] = useState(false);
   
-  const playCompleteSound = useSound('/sounds/chore-complete.mp3', areSoundsEnabled);
+  const playCompleteSound = useSound('chore-complete', areSoundsEnabled);
 
   const isBonus = chore.type === 'bonus';
   const selectedDateString = formatDate(selectedDate);

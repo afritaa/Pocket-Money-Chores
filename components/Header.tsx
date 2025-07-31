@@ -373,7 +373,7 @@ const Header: React.FC<HeaderProps> = ({
   return (
     <>
       {isKidsMode ? (
-        <div className="flex flex-col items-center gap-4">
+        <div className="flex flex-col items-center gap-4 mb-4">
           <div className="flex items-center justify-center text-[var(--text-primary)] flex-shrink-0">
             <input
               type="file"
