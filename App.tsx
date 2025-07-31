@@ -3,6 +3,10 @@
 
 
 
+
+
+
+
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Chore, Day, EarningsRecord, Profile, ParentSettings, PastChoreApproval, CompletionSnapshot, CompletionState, PayDayConfig, BonusNotification } from './types';
 import Header from './components/Header';
@@ -246,6 +250,10 @@ const ThemeStyles = () => (
       background: linear-gradient(270deg, #facc15, #f59e0b);
       background-size: 200% 200%;
       animation: pulse-bonus 4s ease-in-out infinite;
+    }
+    .kids-fade-mask {
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 5rem, black 100%);
+      mask-image: linear-gradient(to bottom, transparent 0, black 5rem, black 100%);
     }
   `}</style>
 );
@@ -1132,11 +1140,37 @@ useEffect(() => {
   
   useEffect(() => {
     if (isKidsMode && isToday) {
-        const todayString = formatDate(new Date());
-        const firstUncompletedChore = filteredChores.find(chore => chore.completions[todayString] !== 'completed' && chore.completions[todayString] !== 'cashed_out' && chore.completions[todayString] !== 'pending_cash_out');
-        if (firstUncompletedChore) {
-            setTimeout(() => { document.getElementById(`chore-${firstUncompletedChore.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 150);
-        }
+      const todayString = formatDate(new Date());
+      const firstUncompletedChoreIndex = filteredChores.findIndex(
+        chore => !['completed', 'cashed_out', 'pending_cash_out'].includes(chore.completions[todayString])
+      );
+
+      if (firstUncompletedChoreIndex !== -1) {
+        const firstUncompletedChore = filteredChores[firstUncompletedChoreIndex];
+        setTimeout(() => {
+          const targetElement = document.getElementById(`chore-${firstUncompletedChore.id}`);
+          const scrollContainer = mainScrollRef.current;
+          
+          if (!targetElement || !scrollContainer) return;
+
+          if (firstUncompletedChoreIndex > 0) {
+            const previousChore = filteredChores[firstUncompletedChoreIndex - 1];
+            const previousElement = document.getElementById(`chore-${previousChore.id}`);
+            
+            if (previousElement) {
+              const offset = previousElement.offsetHeight / 2;
+              scrollContainer.scrollTo({
+                top: targetElement.offsetTop - offset,
+                behavior: 'smooth',
+              });
+            } else {
+              targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          } else {
+            targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 150);
+      }
     }
   }, [isKidsMode, isToday, filteredChores, activeProfileId]);
 
@@ -1271,14 +1305,7 @@ useEffect(() => {
           />
         </header>
         
-        <main ref={mainScrollRef} className={isKidsMode ? 'flex-1 overflow-y-auto relative' : ''}>
-            {isKidsMode && (
-              <div
-                className={`sticky top-0 h-16 w-full z-10 pointer-events-none transition-opacity duration-300 ${showTopFade ? 'opacity-100' : 'opacity-0'}`}
-                style={{ background: 'linear-gradient(to bottom, var(--bg-primary) 60%, transparent)' }}
-                aria-hidden="true"
-              />
-            )}
+        <main ref={mainScrollRef} className={`${isKidsMode ? 'flex-1 overflow-y-auto relative' : ''} ${showTopFade ? 'kids-fade-mask' : ''}`}>
             {!isKidsMode && profiles.length > 1 && (
                 <div className="mb-6 p-3 bg-[var(--bg-tertiary)] rounded-2xl">
                     <h3 className="text-sm font-semibold text-[var(--text-secondary)] mb-2 text-center">Managing Chores For</h3>

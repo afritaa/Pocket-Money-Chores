@@ -311,7 +311,7 @@ const Header: React.FC<HeaderProps> = ({
       <CoinIcon />
       <div className="text-left">
         <div className="text-sm font-medium text-[var(--text-secondary)]">Earnings</div>
-        <div className="flex items-center text-2xl sm:text-3xl font-bold text-[var(--text-primary)] tabular-nums" style={{ minWidth: '8ch' }}>
+        <div className="flex items-center text-2xl sm:text-3xl font-bold text-[var(--text-primary)]" style={{ minWidth: '8ch', fontVariantNumeric: 'tabular-nums' }}>
           <AnimatedNumber value={earnings} isKidsMode={false} />
         </div>
       </div>
@@ -338,7 +338,7 @@ const Header: React.FC<HeaderProps> = ({
        <CoinIcon className="h-8 w-8" />
        <div className="text-center">
            <div className="text-sm font-medium text-[var(--text-secondary)]">Earnings</div>
-           <div className="flex justify-center items-center text-3xl font-bold text-[var(--text-primary)] tabular-nums" style={{ minWidth: '8ch' }}>
+           <div className="flex justify-center items-center text-3xl font-bold text-[var(--text-primary)]" style={{ minWidth: '8ch', fontVariantNumeric: 'tabular-nums' }}>
               <AnimatedNumber value={earnings} isKidsMode={isKidsMode} />
            </div>
        </div>

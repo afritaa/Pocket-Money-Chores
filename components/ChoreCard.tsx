@@ -2,6 +2,10 @@
 
 
 
+
+
+
+
 import React, { useState } from 'react';
 import { Chore, Day, PastChoreApproval } from '../types';
 import { CheckIcon, PencilIcon, DragHandleIcon, ExclamationIcon, CoinIcon, StarIcon } from '../constants';
@@ -46,7 +50,7 @@ const ChoreCard: React.FC<ChoreCardProps> = ({
   const [isCelebrating, setIsCelebrating] = useState(false);
   const [isMouseDragOver, setIsMouseDragOver] = useState(false);
   
-  const playCompleteSound = useSound('chore-complete', areSoundsEnabled);
+  const playCompleteSound = useSound('/sounds/chore-complete.mp3', areSoundsEnabled);
 
   const isBonus = chore.type === 'bonus';
   const selectedDateString = formatDate(selectedDate);
@@ -182,7 +186,7 @@ const ChoreCard: React.FC<ChoreCardProps> = ({
                   )}
                 </div>
               </div>
-              <div className="flex justify-between gap-0.5 sm:gap-1 bg-[var(--bg-tertiary)] p-1 sm:p-1.5 rounded-xl">
+              <div className={`flex justify-between gap-0.5 sm:gap-1 bg-[var(--bg-secondary)] p-1 sm:p-1.5 rounded-xl`}>
                   {currentWeekDays.map(date => {
                   const dateString = formatDate(date);
                   const dayOfWeek = getDayFromDate(date);
