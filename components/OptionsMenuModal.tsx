@@ -1,4 +1,7 @@
 
+
+
+
 import React, { useState, useEffect } from 'react';
 import { ParentSettings, Profile } from '../types';
 import { SettingsIcon, UserCircleIcon, PencilIcon } from '../constants';
@@ -15,6 +18,9 @@ interface OptionsMenuModalProps {
 const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({ isOpen, onClose, settings, onUpdateSettings, profiles, onEditProfile }) => {
   const [defaultChoreValue, setDefaultChoreValue] = useState(String(settings.defaultChoreValue || 20));
   const [defaultChoreUnit, setDefaultChoreUnit] = useState<'cents' | 'dollars'>('cents');
+  const [defaultBonusValue, setDefaultBonusValue] = useState(String(settings.defaultBonusValue || 100));
+  const [defaultBonusUnit, setDefaultBonusUnit] = useState<'cents' | 'dollars'>('cents');
+  const [areSoundsEnabled, setAreSoundsEnabled] = useState(settings.areSoundsEnabled ?? true);
   
   const [currentPasscode, setCurrentPasscode] = useState('');
   const [newPasscode, setNewPasscode] = useState('');
@@ -30,14 +36,24 @@ const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({ isOpen, onClose, se
       setCurrentPasscode('');
       setNewPasscode('');
       setConfirmNewPasscode('');
+      setAreSoundsEnabled(settings.areSoundsEnabled ?? true);
       
-      const currentValueInCents = settings.defaultChoreValue || 20;
-      if (currentValueInCents >= 100) {
+      const choreValueInCents = settings.defaultChoreValue || 20;
+      if (choreValueInCents >= 100 && choreValueInCents % 100 === 0) {
         setDefaultChoreUnit('dollars');
-        setDefaultChoreValue((currentValueInCents / 100).toFixed(2).replace('.00', ''));
+        setDefaultChoreValue(String(choreValueInCents / 100));
       } else {
         setDefaultChoreUnit('cents');
-        setDefaultChoreValue(String(currentValueInCents));
+        setDefaultChoreValue(String(choreValueInCents));
+      }
+      
+      const bonusValueInCents = settings.defaultBonusValue || 100;
+      if (bonusValueInCents >= 100 && bonusValueInCents % 100 === 0) {
+        setDefaultBonusUnit('dollars');
+        setDefaultBonusValue(String(bonusValueInCents / 100));
+      } else {
+        setDefaultBonusUnit('cents');
+        setDefaultBonusValue(String(bonusValueInCents));
       }
     }
   }, [isOpen, settings]);
@@ -53,13 +69,21 @@ const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({ isOpen, onClose, se
         if (newPasscode !== confirmNewPasscode) { setError("New passcodes don't match."); return; }
     }
 
-    const numericDefaultValueRaw = parseFloat(defaultChoreValue);
-    if (isNaN(numericDefaultValueRaw) || numericDefaultValueRaw < 0) { setError("Default chore value must be a positive number."); return; }
-    let numericDefaultValueInCents = defaultChoreUnit === 'dollars' ? Math.round(numericDefaultValueRaw * 100) : Math.round(numericDefaultValueRaw);
-    if (isNaN(numericDefaultValueInCents) || numericDefaultValueInCents < 0) { setError("Invalid default chore value."); return; }
+    const choreValueRaw = parseFloat(defaultChoreValue);
+    if (isNaN(choreValueRaw) || choreValueRaw < 0) { setError("Default chore value must be a positive number."); return; }
+    const choreValueInCents = defaultChoreUnit === 'dollars' ? Math.round(choreValueRaw * 100) : Math.round(choreValueRaw);
+
+    const bonusValueRaw = parseFloat(defaultBonusValue);
+    if (isNaN(bonusValueRaw) || bonusValueRaw < 0) { setError("Default bonus value must be a positive number."); return; }
+    const bonusValueInCents = defaultBonusUnit === 'dollars' ? Math.round(bonusValueRaw * 100) : Math.round(bonusValueRaw);
+
+    if (isNaN(choreValueInCents) || choreValueInCents < 0) { setError("Invalid default chore value."); return; }
+    if (isNaN(bonusValueInCents) || bonusValueInCents < 0) { setError("Invalid default bonus value."); return; }
     
     const settingsUpdate: Partial<ParentSettings> = {};
-    if (numericDefaultValueInCents !== settings.defaultChoreValue) settingsUpdate.defaultChoreValue = numericDefaultValueInCents;
+    if (choreValueInCents !== settings.defaultChoreValue) settingsUpdate.defaultChoreValue = choreValueInCents;
+    if (bonusValueInCents !== settings.defaultBonusValue) settingsUpdate.defaultBonusValue = bonusValueInCents;
+    if (areSoundsEnabled !== settings.areSoundsEnabled) settingsUpdate.areSoundsEnabled = areSoundsEnabled;
     if (newPasscode) settingsUpdate.passcode = newPasscode;
     
     if (Object.keys(settingsUpdate).length > 0) {
@@ -95,10 +119,34 @@ const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({ isOpen, onClose, se
                         <input id="default-chore-value" type="number" value={defaultChoreValue} onChange={e => setDefaultChoreValue(e.target.value)} min="0" step={defaultChoreUnit === 'dollars' ? '0.01' : '1'} className="w-32 px-4 py-2 bg-[var(--bg-tertiary)] border-[var(--border-secondary)] border rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] transition-all"/>
                     </div>
                 </div>
+                 <div>
+                    <label htmlFor="default-bonus-value" className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Default Bonus Amount</label>
+                    <div className="flex items-center gap-2">
+                        <div className="flex rounded-lg bg-[var(--bg-tertiary)] p-1 self-stretch border border-[var(--border-secondary)]">
+                            <button type="button" onClick={() => setDefaultBonusUnit('dollars')} className={`px-4 py-2 text-base font-semibold rounded-md transition-all ${defaultBonusUnit === 'dollars' ? 'bg-[var(--bg-secondary)] text-[var(--accent-primary)] shadow-sm' : 'text-[var(--text-secondary)]'}`}>$</button>
+                            <button type="button" onClick={() => setDefaultBonusUnit('cents')} className={`px-4 py-2 text-base font-semibold rounded-md transition-all ${defaultBonusUnit === 'cents' ? 'bg-[var(--bg-secondary)] text-[var(--accent-primary)] shadow-sm' : 'text-[var(--text-secondary)]'}`}>¢</button>
+                        </div>
+                        <input id="default-bonus-value" type="number" value={defaultBonusValue} onChange={e => setDefaultBonusValue(e.target.value)} min="0" step={defaultBonusUnit === 'dollars' ? '0.01' : '1'} className="w-32 px-4 py-2 bg-[var(--bg-tertiary)] border-[var(--border-secondary)] border rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] transition-all"/>
+                    </div>
+                </div>
+                 <div className="flex items-center justify-between pt-4 mt-4 border-t border-[var(--border-primary)]">
+                    <label htmlFor="sound-toggle" className="flex-grow cursor-pointer">
+                        <span className="font-medium text-[var(--text-primary)]">Enable Sound Effects</span>
+                        <p className="text-sm text-[var(--text-secondary)]">Play sounds for actions like completing a chore.</p>
+                    </label>
+                    <button
+                        id="sound-toggle"
+                        type="button"
+                        onClick={() => setAreSoundsEnabled(p => !p)}
+                        className={`relative inline-flex flex-shrink-0 h-6 w-11 items-center rounded-full transition-colors ${areSoundsEnabled ? 'bg-[var(--accent-primary)]' : 'bg-[var(--bg-tertiary)]'}`}
+                    >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${areSoundsEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                </div>
             </fieldset>
 
             <fieldset className="space-y-3 p-4 border border-[var(--border-secondary)] rounded-lg">
-                <legend className="text-lg font-semibold px-2 text-[var(--text-secondary)]">Pay Day Settings</legend>
+                <legend className="text-lg font-semibold px-2 text-[var(--text-secondary)]">Profiles & Pay Day</legend>
                 {profiles.map(p => (
                     <div key={p.id} className="flex items-center justify-between p-2 bg-[var(--bg-tertiary)] rounded-lg">
                         <div className="flex items-center gap-3">

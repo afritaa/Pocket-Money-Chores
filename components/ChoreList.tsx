@@ -1,7 +1,8 @@
 
 
+
 import React from 'react';
-import { Chore, ChoreCategory, PastChoreApproval } from '../types';
+import { Chore, PastChoreApproval } from '../types';
 import ChoreCard from './ChoreCard';
 import { CHORE_CATEGORY_ORDER } from '../constants';
 
@@ -19,6 +20,7 @@ interface ChoreListProps {
   draggingChoreId: string | null;
   dragOverChoreId: string | null;
   onDragStartTouch: (e: React.TouchEvent, choreId: string) => void;
+  areSoundsEnabled: boolean;
 }
 
 const ChoreList: React.FC<ChoreListProps> = ({ 
@@ -34,7 +36,8 @@ const ChoreList: React.FC<ChoreListProps> = ({
   onApprovePastChore,
   draggingChoreId,
   dragOverChoreId,
-  onDragStartTouch
+  onDragStartTouch,
+  areSoundsEnabled
 }) => {
   
   if (chores.length === 0) {
@@ -55,7 +58,7 @@ const ChoreList: React.FC<ChoreListProps> = ({
     return acc;
   }, {} as Record<string, Chore[]>);
 
-  const categoryOrder = [...Object.keys(CHORE_CATEGORY_ORDER) as ChoreCategory[], 'Uncategorized'];
+  const categoryOrder = [...Object.keys(CHORE_CATEGORY_ORDER), 'Uncategorized'];
   
   const groupKeys = Object.keys(groupedChores);
   const showHeaders = !(groupKeys.length === 1 && groupKeys[0] === 'Uncategorized');
@@ -93,6 +96,7 @@ const ChoreList: React.FC<ChoreListProps> = ({
                   draggingChoreId={draggingChoreId}
                   dragOverChoreId={dragOverChoreId}
                   onDragStartTouch={onDragStartTouch}
+                  areSoundsEnabled={areSoundsEnabled}
                 />
               ))}
             </div>

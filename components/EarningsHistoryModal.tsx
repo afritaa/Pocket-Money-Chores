@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { EarningsRecord, GraphDataPoint } from '../types';
 import LineGraph from './LineGraph';
+import { StarIcon } from '../constants';
 
 interface EarningsHistoryModalProps {
   isOpen: boolean;
@@ -105,9 +106,17 @@ const EarningsHistoryModal: React.FC<EarningsHistoryModalProps> = ({ isOpen, onC
                             <ul className="space-y-3 max-h-[40vh] overflow-y-auto pr-2 -mr-2 custom-scrollbar">
                                 {[...history].reverse().map((record) => (
                                     <li key={record.id} className="flex justify-between items-center bg-[var(--bg-tertiary)] p-3 rounded-lg border border-[var(--border-secondary)]">
-                                        <span className="font-medium text-[var(--text-secondary)]">
-                                            {parseLocalDate(record.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-                                        </span>
+                                        <div className="flex-grow pr-4">
+                                            <span className="font-medium text-[var(--text-secondary)]">
+                                                {parseLocalDate(record.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                                            </span>
+                                            {record.type === 'bonus' && (
+                                                <div className="mt-1">
+                                                    <p className="text-sm font-bold text-yellow-500 flex items-center gap-1"><StarIcon /> Bonus</p>
+                                                    {record.note && <p className="text-sm italic text-[var(--text-tertiary)] mt-1">"{record.note}"</p>}
+                                                </div>
+                                            )}
+                                        </div>
                                         {editingRecordId === record.id ? (
                                             <div className="flex items-center gap-2">
                                                 <span className="font-bold text-lg text-[var(--success)]">$</span>

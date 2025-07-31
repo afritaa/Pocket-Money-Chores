@@ -3,8 +3,9 @@
 
 import React, { useState } from 'react';
 import { Chore, Day, PastChoreApproval } from '../types';
-import { CheckIcon, PencilIcon, DragHandleIcon, ExclamationIcon, CoinIcon } from '../constants';
+import { CheckIcon, PencilIcon, DragHandleIcon, ExclamationIcon, CoinIcon, StarIcon } from '../constants';
 import DayButton from './DayButton';
+import useSound from '../hooks/useSound';
 
 interface ChoreCardProps {
   chore: Chore;
@@ -20,6 +21,7 @@ interface ChoreCardProps {
   draggingChoreId: string | null;
   dragOverChoreId: string | null;
   onDragStartTouch?: (e: React.TouchEvent, choreId: string) => void;
+  areSoundsEnabled: boolean;
 }
 
 const formatDate = (date: Date): string => {
@@ -35,7 +37,7 @@ const getDayFromDate = (date: Date): Day => {
 };
 
 const ChoreCard: React.FC<ChoreCardProps> = ({ 
-  chore, currentWeekDays, onToggleCompletion, onEditChore, onReorderChores, viewMode, selectedDate, isKidsMode, pastChoreApprovals, onApprovePastChore, draggingChoreId, dragOverChoreId, onDragStartTouch
+  chore, currentWeekDays, onToggleCompletion, onEditChore, onReorderChores, viewMode, selectedDate, isKidsMode, pastChoreApprovals, onApprovePastChore, draggingChoreId, dragOverChoreId, onDragStartTouch, areSoundsEnabled
 }) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -43,6 +45,9 @@ const ChoreCard: React.FC<ChoreCardProps> = ({
   const [isCelebrating, setIsCelebrating] = useState(false);
   const [isMouseDragOver, setIsMouseDragOver] = useState(false);
   
+  const playCompleteSound = useSound('/sounds/chore-complete.mp3', areSoundsEnabled);
+
+  const isBonus = chore.type === 'bonus';
   const selectedDateString = formatDate(selectedDate);
   const completionState = chore.completions[selectedDateString];
   const isCompletedOnSelectedDate = completionState === 'completed';
@@ -51,16 +56,53 @@ const ChoreCard: React.FC<ChoreCardProps> = ({
   const pendingApproval = pastChoreApprovals.find(a => a.choreId === chore.id && a.date === selectedDateString);
   const isPendingOnSelectedDate = !!pendingApproval;
 
+  if (isBonus) {
+    return (
+      <div
+        id={`chore-${chore.id}`}
+        className="bg-[var(--warning-bg-subtle)] border-[var(--warning-border)] rounded-2xl p-2 sm:p-3 shadow-lg flex items-center justify-between gap-2 sm:gap-3 transition-all duration-300 border"
+        onClick={!isKidsMode && onEditChore ? () => onEditChore(chore) : undefined}
+      >
+        {/* Left Info */}
+        <div className="flex items-center gap-3">
+          <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center bg-yellow-400/20 rounded-xl">
+            <StarIcon className="w-7 h-7 sm:w-8 sm:h-8 text-[var(--warning)]" />
+          </div>
+          <div className="flex flex-col justify-center">
+            <h3 className="text-base sm:text-lg font-semibold text-[var(--text-primary)] truncate">{chore.name}</h3>
+            <p className="text-sm sm:text-base font-bold text-[var(--success)]">${(chore.value / 100).toFixed(2)}</p>
+          </div>
+        </div>
+
+        {/* Middle Description */}
+        <div className="hidden sm:flex flex-grow items-center justify-center text-center px-2">
+            {chore.note && <p className="text-sm italic text-[var(--text-secondary)]">"{chore.note}"</p>}
+        </div>
+
+        {/* Right Status */}
+        <div className="flex-shrink-0 flex items-center">
+          <div className={`relative w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center flex-shrink-0 bg-[var(--warning)] text-[var(--warning-text)] shadow-md`}>
+            <span className="text-2xl font-bold">$</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const handleCompleteClick = () => {
     // Parent's one-click approval in daily view
     if (!isKidsMode && pendingApproval && onApprovePastChore) {
       onApprovePastChore(pendingApproval.id);
+      playCompleteSound();
       return;
     }
+    
+    if (isBonus) return; // Bonuses cannot be toggled
 
     if (!isCompletedOnSelectedDate) {
         setIsCelebrating(true);
         setTimeout(() => setIsCelebrating(false), 800);
+        playCompleteSound();
     }
     onToggleCompletion(chore.id, selectedDate);
   };
@@ -71,7 +113,6 @@ const ChoreCard: React.FC<ChoreCardProps> = ({
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
     e.dataTransfer.setData('choreId', chore.id);
     e.dataTransfer.effectAllowed = 'move';
-    // Optional: you could call a function here to set a global dragging state
   };
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -87,7 +128,7 @@ const ChoreCard: React.FC<ChoreCardProps> = ({
     }
   };
 
-  const isDraggable = !isKidsMode && !!onReorderChores && !!onDragStartTouch;
+  const isDraggable = !isKidsMode && !!onReorderChores && !!onDragStartTouch && !isBonus;
   const isDragging = chore.id === draggingChoreId;
   const isDragOver = isMouseDragOver || chore.id === dragOverChoreId;
 
@@ -95,7 +136,7 @@ const ChoreCard: React.FC<ChoreCardProps> = ({
     return (
       <div
         id={`chore-${chore.id}`}
-        className={`bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl p-3 transition-all duration-300 flex items-center gap-3 shadow-lg 
+        className={`bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl p-2 sm:p-3 transition-all duration-300 flex items-center gap-2 sm:gap-3 shadow-lg 
             ${isDragging ? 'opacity-75 shadow-2xl z-20 scale-105' : 'z-10'} 
             ${isDragOver ? 'ring-2 ring-offset-2 ring-offset-[var(--bg-primary)] ring-[var(--accent-primary)]' : ''}`}
         style={{'--shadow-color': 'var(--shadow-color)'} as React.CSSProperties}
@@ -115,35 +156,38 @@ const ChoreCard: React.FC<ChoreCardProps> = ({
             <DragHandleIcon />
           </div>
         )}
-          {chore.icon && (
-            <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-[var(--bg-tertiary)] rounded-xl">
-                {chore.icon.startsWith('data:image/') ? (
+          <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center bg-[var(--bg-tertiary)] rounded-xl">
+            {chore.icon ? (
+                chore.icon.startsWith('data:image/') ? (
                     <img src={chore.icon} alt={chore.name} className="w-full h-full object-cover rounded-xl" />
                 ) : (
                     <span className="text-3xl">{chore.icon}</span>
-                )}
-            </div>
-          )}
-          <div className="flex-grow text-[var(--text-primary)]">
+                )
+            ) : (
+                <StarIcon className="w-6 h-6 sm:w-8 sm:h-8 text-[var(--accent-primary)] opacity-40" />
+            )}
+          </div>
+          <div className="flex-grow text-[var(--text-primary)] min-w-0">
               <div className="flex justify-between items-start mb-2">
-                <div>
-                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">{chore.name}</h3>
-                  <p className="text-base font-bold text-[var(--success)]">${(chore.value / 100).toFixed(2)}</p>
+                <div className="min-w-0">
+                  <h3 className="text-base sm:text-lg font-semibold text-[var(--text-primary)] truncate">{chore.name}</h3>
+                  <p className="text-sm sm:text-base font-bold text-[var(--success)]">${(chore.value / 100).toFixed(2)}</p>
                 </div>
-                <div className="flex items-center space-x-1">
+                <div className="flex items-center space-x-0 sm:space-x-1 flex-shrink-0">
                   {onEditChore && (
-                    <button onClick={() => onEditChore(chore)} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors p-2 rounded-full hover:bg-[var(--bg-tertiary)]" aria-label={`Edit chore: ${chore.name}`}>
+                    <button onClick={() => onEditChore(chore)} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors p-1 sm:p-2 rounded-full hover:bg-[var(--bg-tertiary)]" aria-label={`Edit chore: ${chore.name}`}>
                       <PencilIcon />
                     </button>
                   )}
                 </div>
               </div>
-              <div className="flex justify-between gap-1 bg-[var(--bg-tertiary)] p-1.5 rounded-xl">
+              <div className="flex justify-between gap-0.5 sm:gap-1 bg-[var(--bg-tertiary)] p-1 sm:p-1.5 rounded-xl">
                   {currentWeekDays.map(date => {
                   const dateString = formatDate(date);
                   const dayOfWeek = getDayFromDate(date);
                   const isAssigned = chore.days.includes(dayOfWeek);
                   const completionState = chore.completions[dateString];
+                  const isCompleted = completionState === 'completed';
                   const isPending = pastChoreApprovals.some(a => a.choreId === chore.id && a.date === dateString);
                   const isCurrent = date.getTime() === today.getTime();
                   const isPast = date.getTime() < today.getTime();
@@ -153,13 +197,14 @@ const ChoreCard: React.FC<ChoreCardProps> = ({
                         key={date.getTime()} 
                         day={dayOfWeek} 
                         isAssigned={isAssigned} 
-                        isCompleted={completionState === 'completed'} 
+                        isCompleted={isCompleted} 
                         isCashedOut={completionState === 'cashed_out'}
                         isPendingCashOut={completionState === 'pending_cash_out'}
                         isToday={isCurrent} 
                         isPast={isPast} 
                         isKidsMode={isKidsMode} 
                         isPendingApproval={isPending}
+                        isBonus={false} // never a bonus in this path
                         onClick={() => {
                             const approval = pastChoreApprovals.find(a => a.choreId === chore.id && a.date === dateString);
                             if (!isKidsMode && approval && onApprovePastChore) {
@@ -181,7 +226,7 @@ const ChoreCard: React.FC<ChoreCardProps> = ({
     <button
       onClick={handleCompleteClick}
       disabled={isKidsMode && (isCashedOutOnSelectedDate || isPendingCashOutOnSelectedDate)}
-      className={`relative w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 transform hover:-translate-y-px active:scale-95 flex-shrink-0 ${
+      className={`relative w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-all duration-300 transform hover:-translate-y-px active:scale-95 flex-shrink-0 ${
       isCompletedOnSelectedDate 
           ? 'bg-[var(--success)] text-[var(--success-text)] shadow-md'
           : isCashedOutOnSelectedDate
@@ -192,7 +237,7 @@ const ChoreCard: React.FC<ChoreCardProps> = ({
       } disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none`}
       aria-label={isCompletedOnSelectedDate ? 'Mark as incomplete' : 'Mark as complete'}
     >
-      {isCompletedOnSelectedDate ? <CheckIcon className="w-7 h-7" /> : isCashedOutOnSelectedDate ? <CoinIcon className="w-8 h-8" /> : isPendingOnSelectedDate ? <ExclamationIcon className="w-7 h-7" /> : null}
+      {isCompletedOnSelectedDate ? <CheckIcon className="w-6 h-6 sm:w-7 sm:h-7" /> : isCashedOutOnSelectedDate ? <CoinIcon className="w-7 h-7 sm:w-8 sm:h-8" /> : isPendingOnSelectedDate ? <ExclamationIcon className="w-6 h-6 sm:w-7 sm:h-7" /> : null}
       {isCelebrating && !isCashedOutOnSelectedDate && (
           <div className="absolute inset-0 pointer-events-none flex justify-center items-center">
           {Array.from({ length: 15 }).map((_, i) => (
@@ -205,11 +250,11 @@ const ChoreCard: React.FC<ChoreCardProps> = ({
     </button>
   );
 
-  // Daily View
+  // Daily View for regular chores
   return (
     <div
       id={`chore-${chore.id}`}
-      className={`relative bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl p-3 shadow-lg flex items-center justify-between gap-3 transition-all duration-300 
+      className={`relative bg-[var(--bg-secondary)] border-[var(--border-primary)] rounded-2xl p-2 sm:p-3 shadow-lg flex items-center justify-between gap-2 sm:gap-3 transition-all duration-300 border
         ${isDragging ? 'opacity-75 shadow-2xl z-20 scale-105' : 'z-10'} 
         ${isDragOver ? 'ring-2 ring-offset-2 ring-offset-[var(--bg-primary)] ring-[var(--accent-primary)]' : ''}`}
       style={{'--shadow-color': 'var(--shadow-color)'} as React.CSSProperties}
@@ -217,6 +262,7 @@ const ChoreCard: React.FC<ChoreCardProps> = ({
       onDragLeave={isDraggable ? handleDragLeave : undefined}
       onDrop={isDraggable ? handleDrop : undefined}
       data-chore-id={chore.id}
+      onClick={!isKidsMode && onEditChore ? () => onEditChore(chore) : undefined}
     >
         {isDraggable && (
           <div
@@ -231,19 +277,21 @@ const ChoreCard: React.FC<ChoreCardProps> = ({
         )}
 
         {/* Left Section: Icon and Info */}
-        <div className="flex-grow flex items-center gap-3 min-w-0">
-            {chore.icon && (
-                <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-[var(--bg-tertiary)] rounded-xl">
-                    {chore.icon.startsWith('data:image/') ? (
-                        <img src={chore.icon} alt={chore.name} className="w-full h-full object-cover rounded-xl" />
-                    ) : (
-                        <span className="text-3xl">{chore.icon}</span>
-                    )}
-                </div>
-            )}
+        <div className="flex-grow flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center bg-[var(--bg-tertiary)] rounded-xl">
+              {chore.icon ? (
+                  chore.icon.startsWith('data:image/') ? (
+                      <img src={chore.icon} alt={chore.name} className="w-full h-full object-cover rounded-xl" />
+                  ) : (
+                      <span className="text-3xl">{chore.icon}</span>
+                  )
+              ) : (
+                  <StarIcon className="w-6 h-6 sm:w-8 sm:h-8 text-[var(--accent-primary)] opacity-40" />
+              )}
+            </div>
             <div className="flex-grow min-w-0">
-                <h3 className="text-lg font-semibold text-[var(--text-primary)] truncate">{chore.name}</h3>
-                <p className="text-base font-bold text-[var(--success)]">${(chore.value / 100).toFixed(2)}</p>
+                <h3 className="text-base sm:text-lg font-semibold text-[var(--text-primary)] truncate">{chore.name}</h3>
+                <p className="text-sm sm:text-base font-bold text-[var(--success)]">${(chore.value / 100).toFixed(2)}</p>
             </div>
         </div>
         
@@ -251,17 +299,17 @@ const ChoreCard: React.FC<ChoreCardProps> = ({
         <div className="flex-shrink-0 flex items-center gap-1 sm:gap-2">
             {isKidsMode ? (
               isPendingCashOutOnSelectedDate ? (
-                <div className="flex items-center bg-[var(--bg-tertiary)] px-3 py-2 rounded-lg border border-[var(--border-primary)]">
-                    <p className="text-xs font-semibold text-[var(--text-secondary)] tracking-wide">
+                <div className="flex items-center bg-[var(--bg-tertiary)] px-2 py-1 sm:px-3 sm:py-2 rounded-lg border border-[var(--border-primary)]">
+                    <p className="text-[11px] sm:text-xs font-semibold text-[var(--text-secondary)] tracking-wide">
                         Cash Out Pending
                     </p>
                 </div>
               ) : (
                 <>
-                    {isPendingOnSelectedDate && (
-                        <div className="hidden sm:flex items-center bg-[var(--warning-bg-subtle)] px-2 py-1 rounded-lg animate-fade-in-fast border border-[var(--warning-border)]">
-                            <p className="text-xs font-semibold text-[var(--warning)] tracking-wide">
-                                Sent for Approval
+                    {isPendingOnSelectedDate && !isBonus && (
+                        <div className="flex items-center bg-[var(--warning-bg-subtle)] px-1.5 sm:px-2 py-1 rounded-lg animate-fade-in-fast border border-[var(--warning-border)]">
+                            <p className="text-[11px] sm:text-xs font-semibold text-[var(--warning)] tracking-wide">
+                                Approval Sent
                             </p>
                         </div>
                     )}
@@ -271,7 +319,7 @@ const ChoreCard: React.FC<ChoreCardProps> = ({
             ) : (
               <>
                 {onEditChore && (
-                    <button onClick={() => onEditChore(chore)} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors p-2 rounded-full hover:bg-[var(--bg-tertiary)]" aria-label={`Edit chore: ${chore.name}`}>
+                    <button onClick={() => onEditChore(chore)} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors p-1 sm:p-2 rounded-full hover:bg-[var(--bg-tertiary)]" aria-label={`Edit chore: ${chore.name}`}>
                         <PencilIcon />
                     </button>
                 )}

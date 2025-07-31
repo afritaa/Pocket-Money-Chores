@@ -1,4 +1,12 @@
 
+
+
+export interface BonusNotification {
+  id: string;
+  amount: number;
+  note?: string;
+}
+
 export type CompletionState = 'completed' | 'cashed_out' | 'pending_cash_out';
 
 export enum Day {
@@ -19,13 +27,6 @@ export interface PayDayConfig {
   time?: string; // e.g., "18:00", required for automatic
 }
 
-export enum ChoreCategory {
-  Morning = 'Morning',
-  BeforeSchool = 'Before School',
-  AfterSchool = 'After School',
-  Evening = 'Evening',
-}
-
 export interface Chore {
   id: string;
   name: string;
@@ -33,8 +34,16 @@ export interface Chore {
   days: Day[];
   completions: { [date: string]: CompletionState }; // e.g., { '2023-10-27': 'completed' }
   icon: string | null;
-  category: ChoreCategory | null;
+  category: string | null;
   order: number; // For drag-and-drop sorting
+  type?: 'chore' | 'bonus';
+  note?: string;
+}
+
+export interface AiChoreSuggestion {
+  name: string;
+  value: number;
+  category: string | null;
 }
 
 export interface CompletionSnapshot {
@@ -50,6 +59,8 @@ export interface EarningsRecord {
   date: string; // Date of cash-out request
   amount: number; // Final approved amount
   completionsSnapshot?: CompletionSnapshot[]; // Snapshot of what was completed
+  note?: string; // For bonuses
+  type?: 'chore' | 'bonus';
 }
 
 export interface Profile {
@@ -58,12 +69,17 @@ export interface Profile {
   image: string | null;
   payDayConfig: PayDayConfig;
   theme: string;
+  hasSeenThemePrompt?: boolean;
+  showPotentialEarnings: boolean;
 }
 
 export interface ParentSettings {
   passcode: string | null;
   theme: string;
   defaultChoreValue: number; // in cents
+  defaultBonusValue: number; // in cents
+  customCategories: string[];
+  areSoundsEnabled: boolean;
 }
 
 export interface GraphDataPoint {

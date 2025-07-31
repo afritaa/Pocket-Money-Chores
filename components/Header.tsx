@@ -34,6 +34,51 @@ const usePrevious = <T,>(value: T): T | undefined => {
   return ref.current;
 };
 
+const TickerDigit = React.memo(({ digit }: { digit: number }) => {
+  const transformStyle = {
+    transform: `translateY(-${digit * 10}%)`, // 10 digits in the column, so each is 10%
+    transition: 'transform 0.8s cubic-bezier(0.23, 1, 0.32, 1)',
+  };
+
+  return (
+    <span className="inline-block h-[1em] overflow-hidden leading-[1em] align-bottom">
+      <span className="inline-block" style={transformStyle}>
+        {Array.from({ length: 10 }).map((_, i) => (
+          <span key={i} className="block h-[1em] leading-[1em]">
+            {i}
+          </span>
+        ))}
+      </span>
+    </span>
+  );
+});
+
+const AnimatedNumber = React.memo(({ value, isKidsMode }: { value: number, isKidsMode: boolean }) => {
+    const amountString = (value / 100).toFixed(2);
+
+    if (!isKidsMode) {
+      return (
+        <>
+          <span>$</span>
+          {amountString}
+        </>
+      );
+    }
+
+    return (
+      <>
+        <span className="mr-1">$</span>
+        {amountString.split('').map((char, index) => {
+          if (char === '.') {
+            return <span key={index}>.</span>;
+          }
+          const digit = parseInt(char, 10);
+          return <TickerDigit key={index} digit={digit} />;
+        })}
+      </>
+    );
+});
+
 
 const WeeklyDatePicker = ({ selectedDate, onDateSelect }: { selectedDate: Date, onDateSelect: (date: Date) => void }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -187,45 +232,42 @@ const Header: React.FC<HeaderProps> = ({
   onUpdateProfileImage
 }) => {
   const [showFireworks, setShowFireworks] = useState(false);
-  const [displayTotal, setDisplayTotal] = useState(earnings);
   const prevEarnings = usePrevious(earnings);
+  const [isPulsing, setIsPulsing] = useState(false);
+  const fireworksTimer = useRef<number | undefined>(undefined);
 
   const earningsRef = useRef<HTMLDivElement>(null);
   const [isEarningsFloating, setIsEarningsFloating] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
 
+  // Effect for fireworks. The key prop on the JSX element does the re-triggering.
+  // This effect just manages the visibility window.
   useEffect(() => {
-    if (prevEarnings !== undefined && earnings > prevEarnings) {
+    if (isKidsMode && prevEarnings !== undefined && earnings > prevEarnings) {
       setShowFireworks(true);
-      // Animate the number
-      const diff = earnings - prevEarnings;
-      const duration = 500; // ms
-      const stepTime = 20; // ms
-      const steps = duration / stepTime;
-      const increment = diff / steps;
-      
-      let current = prevEarnings;
-      const timer = setInterval(() => {
-        current += increment;
-        if (current >= earnings) {
-          setDisplayTotal(earnings);
-          clearInterval(timer);
-        } else {
-          setDisplayTotal(current);
-        }
-      }, stepTime);
-
-      setTimeout(() => {
+      if (fireworksTimer.current) {
+        clearTimeout(fireworksTimer.current);
+      }
+      fireworksTimer.current = window.setTimeout(() => {
         setShowFireworks(false);
-      }, 1500); // Fireworks duration
-      
-      return () => clearInterval(timer);
-    } else {
-      // No animation, just update the number
-      setDisplayTotal(earnings);
+      }, 1500); // Fireworks visible duration
     }
-  }, [earnings, prevEarnings]);
+    return () => {
+      if (fireworksTimer.current) {
+        clearTimeout(fireworksTimer.current);
+      }
+    };
+  }, [earnings, prevEarnings, isKidsMode]);
+
+  // Effect for pulsing. This is now robust against rapid updates because
+  // onAnimationEnd resets the state, allowing this effect to trigger a state
+  // change (false -> true) on the next earnings increase.
+  useEffect(() => {
+    if (isKidsMode && prevEarnings !== undefined && earnings > prevEarnings) {
+      setIsPulsing(true);
+    }
+  }, [earnings, prevEarnings, isKidsMode]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -266,35 +308,20 @@ const Header: React.FC<HeaderProps> = ({
   
   const earningsContent = (
     <div className="flex items-center space-x-4 px-4 py-3 sm:px-6">
-       {showFireworks && (
-         <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-           {Array.from({ length: 15 }).map((_, i) => (
-             <div
-               key={i}
-               className="absolute text-xl font-bold text-[var(--success)] animate-fireworks-burst"
-               style={{
-                 '--angle': `${Math.random() * 360}deg`,
-                 '--distance': `${30 + Math.random() * 40}px`,
-                 animationDelay: `${Math.random() * 0.2}s`,
-               } as React.CSSProperties}
-             >$</div>
-           ))}
-         </div>
-       )}
-       <CoinIcon />
-       <div className="text-left">
-           <div className="text-sm font-medium text-[var(--text-secondary)]">Earnings</div>
-           <div className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
-               <span>$</span>{(displayTotal / 100).toFixed(2)}
-           </div>
-       </div>
-   </div>
- );
+      <CoinIcon />
+      <div className="text-left">
+        <div className="text-sm font-medium text-[var(--text-secondary)]">Earnings</div>
+        <div className="flex items-center text-2xl sm:text-3xl font-bold text-[var(--text-primary)] tabular-nums" style={{ minWidth: '8ch' }}>
+          <AnimatedNumber value={earnings} isKidsMode={false} />
+        </div>
+      </div>
+    </div>
+  );
  
- const kidsEarningsContent = (
+  const kidsEarningsContent = (
     <div className="flex flex-col items-center space-y-1 py-3">
-       {showFireworks && (
-         <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+       {showFireworks && isKidsMode && (
+         <div key={`fireworks-kid-${earnings}`} className="absolute inset-0 pointer-events-none flex items-center justify-center">
            {Array.from({ length: 15 }).map((_, i) => (
              <div
                key={i}
@@ -311,8 +338,8 @@ const Header: React.FC<HeaderProps> = ({
        <CoinIcon className="h-8 w-8" />
        <div className="text-center">
            <div className="text-sm font-medium text-[var(--text-secondary)]">Earnings</div>
-           <div className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
-               <span>$</span>{(displayTotal / 100).toFixed(2)}
+           <div className="flex justify-center items-center text-3xl font-bold text-[var(--text-primary)] tabular-nums" style={{ minWidth: '8ch' }}>
+              <AnimatedNumber value={earnings} isKidsMode={isKidsMode} />
            </div>
        </div>
    </div>
@@ -346,7 +373,7 @@ const Header: React.FC<HeaderProps> = ({
   return (
     <>
       {isKidsMode ? (
-        <div className="mb-4 flex flex-col items-center gap-4">
+        <div className="flex flex-col items-center gap-4">
           <div className="flex items-center justify-center text-[var(--text-primary)] flex-shrink-0">
             <input
               type="file"
@@ -374,20 +401,27 @@ const Header: React.FC<HeaderProps> = ({
           </div>
           <div 
             ref={earningsRef} 
-            className={`relative w-full max-w-xs transition-opacity duration-300 ${isEarningsFloating ? 'opacity-0' : 'opacity-100'} bg-[var(--bg-secondary)] backdrop-blur-sm shadow-xl border border-[var(--border-primary)] rounded-2xl overflow-hidden`}
+            className={`relative w-full max-w-xs transition-opacity duration-300 ease-in-out 
+                        ${isEarningsFloating ? 'opacity-0' : 'opacity-100'} 
+                        bg-[var(--bg-secondary)] backdrop-blur-sm shadow-xl border border-[var(--border-primary)] rounded-2xl overflow-hidden 
+                        ${isPulsing && isKidsMode ? 'animate-pulse-once' : ''}`}
+            onAnimationEnd={() => setIsPulsing(false)}
           >
-              {kidsEarningsContent}
-              {showCashOutButton && (
-                  <div className="px-4 pb-4 animate-fade-in-fast">
-                    <button 
-                        onClick={onCashOut}
-                        disabled={isCashOutDisabled}
-                        className="w-full bg-[var(--success)] hover:opacity-80 text-[var(--success-text)] font-bold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-px transition-all disabled:bg-[var(--bg-tertiary)] disabled:text-[var(--text-tertiary)] disabled:shadow-none disabled:cursor-not-allowed disabled:transform-none"
-                    >
-                        Cash Out
-                    </button>
-                  </div>
-              )}
+              <div className="animate-shimmer absolute inset-0"></div>
+              <div className="relative z-10">
+                {kidsEarningsContent}
+                {showCashOutButton && (
+                    <div className="px-4 pb-4 animate-fade-in-fast">
+                      <button 
+                          onClick={onCashOut}
+                          disabled={isCashOutDisabled}
+                          className="w-full bg-[var(--success)] hover:opacity-80 text-[var(--success-text)] font-bold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-px transition-all disabled:bg-[var(--bg-tertiary)] disabled:text-[var(--text-tertiary)] disabled:shadow-none disabled:cursor-not-allowed disabled:transform-none"
+                      >
+                          Cash Out
+                      </button>
+                    </div>
+                )}
+              </div>
           </div>
         </div>
       ) : (
@@ -429,11 +463,11 @@ const Header: React.FC<HeaderProps> = ({
               <div className="flex items-baseline justify-between gap-4">
                  {viewMode === 'weekly' ? (
                   <h2 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)] whitespace-nowrap">
-                    Weekly Chores
+                    Weekly View
                   </h2>
                 ) : (
                   <h2 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)] whitespace-nowrap">
-                    {isToday ? "Today's Chores" : selectedDate.toLocaleDateString('en-US', { weekday: 'long' })}
+                    {isToday ? "Today's View" : `${selectedDate.toLocaleDateString('en-US', { weekday: 'long' })}'s View`}
                   </h2>
                 )}
 
@@ -468,6 +502,32 @@ const Header: React.FC<HeaderProps> = ({
           }
            @keyframes fade-in-fast { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
           .animate-fade-in-fast { animation: fade-in-fast 0.3s ease-out forwards; }
+          @keyframes shimmer {
+            0% { background-position: -200% -200%; }
+            100% { background-position: 200% 200%; }
+          }
+          .animate-shimmer {
+            background-image: linear-gradient(
+              135deg,
+              transparent 30%,
+              rgba(252, 251, 222, 0.4) 45%,
+              rgba(252, 251, 222, 0.6) 50%,
+              rgba(252, 251, 222, 0.4) 55%,
+              transparent 70%
+            );
+            background-size: 200% 200%;
+            background-repeat: no-repeat;
+            animation: shimmer 10s ease-in-out infinite;
+            pointer-events: none;
+          }
+          @keyframes pulse-once {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+          }
+          .animate-pulse-once {
+            animation: pulse-once 0.6s ease-in-out;
+          }
       `}</style>
        {isEarningsFloating && (
         <div className="fixed top-4 right-4 sm:right-6 md:right-8 z-30 bg-[var(--bg-secondary)] backdrop-blur-sm shadow-xl border border-[var(--border-primary)] rounded-2xl animate-fade-in-fast">

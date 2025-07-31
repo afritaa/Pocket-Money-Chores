@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { Day, PayDayConfig, PayDayMode } from '../types';
 import { DAYS_OF_WEEK, UserCircleIcon } from '../constants';
@@ -37,8 +38,7 @@ const PayDaySettingsEditor = ({ config, onConfigChange, profileName }: { config:
                         <button type="button" onClick={() => onConfigChange({ ...config, mode: 'automatic', time: config.time || '18:00' })} className={`w-1/2 py-1.5 text-sm font-semibold rounded-full transition-all ${mode === 'automatic' ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)] shadow-md' : 'text-[var(--text-secondary)]'}`}>Automatic</button>
                     </div>
                     {mode === 'manual' && <p className="text-xs text-[var(--text-secondary)] text-center">{profileName} can only see the Cash Out button and request payment on this selected day.</p>}
-                    {mode === 'automatic' && <p className="text-xs text-[var(--text-secondary)] text-center">Sets a regular pay day. Cash Out requests will be sent automatically.
-                    </p>}
+                    {mode === 'automatic' && <p className="text-xs text-[var(--text-secondary)] text-center">Have a regular pay day already? No worries! Set it below and a request will be automatically sent each week telling you how much {profileName} has earned!</p>}
                     
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-[var(--text-secondary)]">Pay Day of the Week</label>
@@ -122,7 +122,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onSave }) => {
       case 2:
         return (
            <div className="animate-fade-in">
-             <h3 className="text-xl font-bold mb-1">Your First Child's Profile</h3>
+             <h3 className="text-xl font-bold mb-1">Your Child's Profile</h3>
              <p className="text-[var(--text-secondary)] mb-6">Let's start with the basics.</p>
              <div className="flex flex-col items-center space-y-4 mb-6">
                 {image ? <img src={image} alt="Profile" className="h-24 w-24 rounded-full object-cover border-2 border-[var(--border-secondary)] shadow-lg" /> : <UserCircleIcon className="h-24 w-24 text-[var(--text-tertiary)]" />}

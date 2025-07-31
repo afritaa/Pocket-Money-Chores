@@ -5,7 +5,7 @@ import { DAYS_OF_WEEK, UserCircleIcon } from '../constants';
 interface AddChildModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: Omit<Profile, 'id' | 'theme'>) => void;
+  onSave: (data: Omit<Profile, 'id' | 'theme' | 'hasSeenThemePrompt' | 'showPotentialEarnings'>) => void;
 }
 
 const AddChildModal: React.FC<AddChildModalProps> = ({ isOpen, onClose, onSave }) => {

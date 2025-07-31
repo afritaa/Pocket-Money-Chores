@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Profile, Day, PayDayConfig } from '../types';
 import { DAYS_OF_WEEK, UserCircleIcon, TrashIcon } from '../constants';
@@ -40,7 +41,7 @@ const PayDaySettingsEditor = ({ config, onConfigChange, profileName }: { config:
                         <button type="button" onClick={() => onConfigChange({ ...config, mode: 'automatic', time: config.time || '18:00' })} className={`w-1/2 py-1.5 text-sm font-semibold rounded-full transition-all ${mode === 'automatic' ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)] shadow-md' : 'text-[var(--text-secondary)]'}`}>Automatic</button>
                     </div>
                     {mode === 'manual' && <p className="text-xs text-[var(--text-secondary)] text-center">{profileName} can only see the Cash Out button and request payment on this selected day.</p>}
-                    {mode === 'automatic' && <p className="text-xs text-[var(--text-secondary)] text-center">Sets a regular pay day. Cash Out requests will be sent automatically.</p>}
+                    {mode === 'automatic' && <p className="text-xs text-[var(--text-secondary)] text-center">Have a regular pay day already? No worries! Set it below and a request will be automatically sent each week telling you how much {profileName} has earned!</p>}
                     
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-[var(--text-secondary)]">Pay Day of the Week</label>
@@ -70,6 +71,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, on
   const [name, setName] = useState('');
   const [image, setImage] = useState<string | null>(null);
   const [payDayConfig, setPayDayConfig] = useState<PayDayConfig>({ mode: 'anytime' });
+  const [showPotentialEarnings, setShowPotentialEarnings] = useState(true);
   const [error, setError] = useState('');
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
@@ -77,6 +79,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, on
     setName(initialData?.name || '');
     setImage(initialData?.image || null);
     setPayDayConfig(initialData?.payDayConfig || { mode: 'anytime' });
+    setShowPotentialEarnings(initialData?.showPotentialEarnings ?? true);
     setError('');
     setIsConfirmingDelete(false);
   }, [initialData]);
@@ -104,7 +107,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, on
       setError("Child's name is required.");
       return;
     }
-    onSave({ ...initialData, name: name.trim(), image, payDayConfig });
+    onSave({ ...initialData, name: name.trim(), image, payDayConfig, showPotentialEarnings });
   };
 
   if (!isOpen) return null;
@@ -130,6 +133,22 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, on
           <fieldset className="space-y-4 pt-4 border-t border-[var(--border-primary)]">
             <legend className="text-lg font-semibold text-[var(--text-secondary)] -mt-9 px-2 bg-[var(--bg-secondary)] w-auto mx-auto">Pay Day Settings</legend>
              <PayDaySettingsEditor config={payDayConfig} onConfigChange={setPayDayConfig} profileName={name} />
+              {(payDayConfig.mode === 'manual' || payDayConfig.mode === 'automatic') && (
+                  <div className="flex items-center justify-between pt-4 mt-4 border-t border-[var(--border-primary)] animate-fade-in-fast">
+                      <label htmlFor="show-potential-toggle-profile" className="flex-grow cursor-pointer">
+                          <span className="font-medium text-[var(--text-primary)]">Show Potential Earnings</span>
+                          <p className="text-sm text-[var(--text-secondary)]">Display potential earnings until next pay day.</p>
+                      </label>
+                      <button
+                          id="show-potential-toggle-profile"
+                          type="button"
+                          onClick={() => setShowPotentialEarnings(p => !p)}
+                          className={`relative inline-flex flex-shrink-0 h-6 w-11 items-center rounded-full transition-colors ${showPotentialEarnings ? 'bg-[var(--accent-primary)]' : 'bg-[var(--bg-tertiary)]'}`}
+                      >
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${showPotentialEarnings ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
+                  </div>
+              )}
           </fieldset>
           
           <div className="pt-6 mt-6 border-t border-[var(--border-primary)] flex justify-end space-x-4">
