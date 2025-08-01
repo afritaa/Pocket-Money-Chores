@@ -1,7 +1,5 @@
-
-
 import React, { useState } from 'react';
-import { Day, PayDayConfig, PayDayMode } from '../types';
+import { Day, Profile, PayDayConfig, PayDayMode } from '../types';
 import { DAYS_OF_WEEK, UserCircleIcon } from '../constants';
 
 interface WelcomeModalProps {
@@ -114,7 +112,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onSave }) => {
       case 1:
         return (
           <div className="text-center animate-fade-in">
-            <h2 className="text-3xl font-bold mb-4 leading-tight">Welcome to<br />Pocket Money Chores!</h2>
+            <h2 className="text-3xl font-bold mb-4 leading-tight">Welcome to<br />Pocket Money Chores.</h2>
             <p className="text-[var(--text-secondary)] mb-8">Let's get everything set up for you. It'll only take a minute.</p>
             <button onClick={handleNextStep} className="w-full px-6 py-3 rounded-lg text-[var(--accent-primary-text)] bg-[var(--accent-primary)] hover:bg-[var(--accent-secondary)] font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-px transition-all">Get Started</button>
           </div>

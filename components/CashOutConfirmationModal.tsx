@@ -1,13 +1,24 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
+import useSound from '../hooks/useSound';
+import { CASH_OUT_SOUND } from '../sounds';
 
 interface CashOutConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
   amount: number;
+  areSoundsEnabled: boolean;
 }
 
-const CashOutConfirmationModal: React.FC<CashOutConfirmationModalProps> = ({ isOpen, onClose, amount }) => {
+const CashOutConfirmationModal: React.FC<CashOutConfirmationModalProps> = ({ isOpen, onClose, amount, areSoundsEnabled }) => {
+  const playCashOutSound = useSound(CASH_OUT_SOUND, areSoundsEnabled);
+
+  useEffect(() => {
+    if (isOpen) {
+      playCashOutSound();
+    }
+  }, [isOpen, playCashOutSound]);
+
   const confettiPieces = useMemo(() => {
     if (!isOpen) return [];
     const colors = ['var(--warning)', 'var(--success)', 'var(--accent-primary)', 'var(--danger)', '#a78bfa', '#f472b6'];
@@ -40,11 +51,11 @@ const CashOutConfirmationModal: React.FC<CashOutConfirmationModalProps> = ({ isO
       
       {/* Modal content, with relative positioning to sit on top of confetti */}
       <div
-        className="relative bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl shadow-2xl p-8 m-4 w-full max-w-md text-center transform transition-all text-[var(--text-primary)]"
+        className="relative bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl p-8 m-4 w-full max-w-md text-center transform transition-all text-[var(--text-primary)]"
         onClick={e => e.stopPropagation()}
       >
         <div className="mb-4">
-            <div className="w-20 h-20 mx-auto rounded-full bg-[var(--warning)] flex items-center justify-center shadow-lg">
+            <div className="w-20 h-20 mx-auto rounded-full bg-[var(--warning)] flex items-center justify-center">
                 <svg className="w-12 h-12 text-[var(--warning-text)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
             </div>
         </div>
@@ -57,7 +68,7 @@ const CashOutConfirmationModal: React.FC<CashOutConfirmationModalProps> = ({ isO
         </p>
         <button
           onClick={onClose}
-          className="w-full px-6 py-3 rounded-lg text-[var(--success-text)] bg-[var(--success)] hover:opacity-80 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-px transition-all"
+          className="w-full px-6 py-3 rounded-lg text-[var(--success-text)] bg-[var(--success)] hover:opacity-80 font-semibold transform hover:-translate-y-px transition-all"
         >
           Okay
         </button>

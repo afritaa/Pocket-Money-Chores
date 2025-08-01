@@ -1,12 +1,4 @@
 
-
-
-
-
-
-
-
-
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Chore, Day, EarningsRecord, Profile, ParentSettings, PastChoreApproval, CompletionSnapshot, CompletionState, PayDayConfig, BonusNotification } from './types';
 import Header from './components/Header';
@@ -30,6 +22,7 @@ import PastChoresApprovalModal from './components/PastChoresApprovalModal';
 import ReviewCashOutModal from './components/ReviewCashOutModal';
 import BonusAwardModal from './components/BonusAwardModal';
 import BonusAwardedNotificationModal from './components/BonusAwardedNotificationModal';
+import ActionBar from './components/ActionBar';
 
 
 // Helper to format date as YYYY-MM-DD
@@ -101,40 +94,37 @@ const usePrevious = <T,>(value: T): T | undefined => {
 const ThemeStyles = () => (
   <style>{`
     :root { /* Default to light theme if nothing is set */
-        --bg-primary: #f1f5f9; --bg-secondary: #ffffff; --bg-tertiary: #e2e8f0; --bg-backdrop: rgba(20, 20, 20, 0.6);
+        --bg-primary: #f1f5f9; --bg-primary-values-rgb: 241, 245, 249; --bg-secondary: #ffffff; --bg-tertiary: #e2e8f0; --bg-backdrop: rgba(20, 20, 20, 0.6);
         --text-primary: #1e293b; --text-secondary: #64748b; --text-tertiary: #94a3b8;
         --accent-primary: #3b82f6; --accent-secondary: #2563eb; --accent-primary-text: #ffffff; --accent-primary-values: 59, 130, 246;
         --border-primary: #e2e8f0; --border-secondary: #cbd5e1;
         --success: #16a34a; --success-text: #ffffff; --success-bg-subtle: rgba(22, 163, 74, 0.1); --success-border: rgba(22,163,74,0.3); --success-cashed-out-bg: rgba(22, 163, 74, 0.2); --success-cashed-out-text: #166534;
         --danger: #dc2626; --danger-text: #ffffff; --danger-bg-subtle: rgba(220, 38, 38, 0.1); --danger-border: rgba(220,38,38,0.3);
         --warning: #d97706; --warning-text: #ffffff; --warning-bg-subtle: rgba(217, 119, 6, 0.1); --warning-border: rgba(217, 119, 6, 0.3);
-        --shadow-color: rgba(0, 0, 0, 0.1);
     }
     
     body[data-theme='light'] {
-        --bg-primary: #f1f5f9; --bg-secondary: #ffffff; --bg-tertiary: #e2e8f0; --bg-backdrop: rgba(20, 20, 20, 0.6);
+        --bg-primary: #f1f5f9; --bg-primary-values-rgb: 241, 245, 249; --bg-secondary: #ffffff; --bg-tertiary: #e2e8f0; --bg-backdrop: rgba(20, 20, 20, 0.6);
         --text-primary: #1e293b; --text-secondary: #64748b; --text-tertiary: #94a3b8;
         --accent-primary: #3b82f6; --accent-secondary: #2563eb; --accent-primary-text: #ffffff; --accent-primary-values: 59, 130, 246;
         --border-primary: #e2e8f0; --border-secondary: #cbd5e1;
         --success: #16a34a; --success-text: #ffffff; --success-bg-subtle: rgba(22, 163, 74, 0.1); --success-border: rgba(22,163,74,0.3); --success-cashed-out-bg: rgba(22, 163, 74, 0.2); --success-cashed-out-text: #166534;
         --danger: #dc2626; --danger-text: #ffffff; --danger-bg-subtle: rgba(220, 38, 38, 0.1); --danger-border: rgba(220,38,38,0.3);
         --warning: #d97706; --warning-text: #ffffff; --warning-bg-subtle: rgba(217, 119, 6, 0.1); --warning-border: rgba(217, 119, 6, 0.3);
-        --shadow-color: rgba(0, 0, 0, 0.1);
     }
     
     body[data-theme='dark'] {
-        --bg-primary: #020617; --bg-secondary: #0f172a; --bg-tertiary: #1e2937; --bg-backdrop: rgba(0,0,0,0.7);
+        --bg-primary: #020617; --bg-primary-values-rgb: 2, 6, 23; --bg-secondary: #0f172a; --bg-tertiary: #1e2937; --bg-backdrop: rgba(0,0,0,0.7);
         --text-primary: #f8fafc; --text-secondary: #94a3b8; --text-tertiary: #64748b;
         --accent-primary: #38bdf8; --accent-secondary: #0ea5e9; --accent-primary-text: #020617; --accent-primary-values: 56, 189, 248;
         --border-primary: #1e2937; --border-secondary: #334155;
         --success: #22c55e; --success-text: #020617; --success-bg-subtle: rgba(34, 197, 94, 0.2); --success-border: rgba(34,197,94,0.5); --success-cashed-out-bg: rgba(34, 197, 94, 0.1); --success-cashed-out-text: #4ade80;
         --danger: #f43f5e; --danger-text: #ffffff; --danger-bg-subtle: rgba(244, 63, 94, 0.2); --danger-border: rgba(244,63,94,0.5);
         --warning: #facc15; --warning-text: #020617; --warning-bg-subtle: rgba(250, 204, 21, 0.15); --warning-border: rgba(250, 204, 21, 0.4);
-        --shadow-color: rgba(0, 0, 0, 0.5);
     }
 
     body[data-theme='dark-blue'] {
-        --bg-primary: #4364F7;
+        --bg-primary: #4364F7; --bg-primary-values-rgb: 67, 100, 247;
         --bg-secondary: #3b59de;
         --bg-tertiary: #324ecc;
         --bg-backdrop: rgba(67, 100, 247, 0.7);
@@ -158,67 +148,61 @@ const ThemeStyles = () => (
         --warning-text: #0b153e;
         --warning-bg-subtle: rgba(241, 196, 15, 0.15);
         --warning-border: rgba(241, 196, 15, 0.4);
-        --shadow-color: rgba(0, 0, 0, 0.3);
         --bg-primary-gradient: linear-gradient(135deg, #0052D4, #4364F7, #6FB1FC);
     }
 
     body[data-theme='lions'] {
-        --bg-primary: #A30D45; --bg-secondary: #8E2A50; --bg-tertiary: #6A0032; --bg-backdrop: rgba(106, 0, 50, 0.8);
+        --bg-primary: #A30D45; --bg-primary-values-rgb: 163, 13, 69; --bg-secondary: #8E2A50; --bg-tertiary: #6A0032; --bg-backdrop: rgba(106, 0, 50, 0.8);
         --text-primary: #FFD700; --text-secondary: #00A2E8; --text-tertiary: #94a3b8;
         --accent-primary: #00A2E8; --accent-secondary: #0077B6; --accent-primary-text: #ffffff; --accent-primary-values: 0, 162, 232;
         --border-primary: #6A0032; --border-secondary: #FFD700;
         --success: #2a9d8f; --success-text: #ffffff; --success-bg-subtle: rgba(42, 157, 143, 0.2); --success-border: #2a9d8f; --success-cashed-out-bg: rgba(42, 157, 143, 0.1); --success-cashed-out-text: #2a9d8f;
         --danger: #e63946; --danger-text: #ffffff; --danger-bg-subtle: rgba(230, 57, 70, 0.2); --danger-border: #e63946;
         --warning: #ffb703; --warning-text: #000000; --warning-bg-subtle: rgba(255, 183, 3, 0.2); --warning-border: #ffb703;
-        --shadow-color: rgba(0, 0, 0, 0.5);
         --bg-primary-gradient: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg stroke='%23FFD700' stroke-width='1' opacity='0.08'%3E%3Cline x1='20' y1='30' x2='20' y2='70' /%3E%3Cline x1='40' y1='20' x2='40' y2='80' /%3E%3Cline x1='60' y1='20' x2='60' y2='80' /%3E%3Cline x1='80' y1='30' x2='80' y2='70' /%3E%3C/g%3E%3C/svg%3E"), linear-gradient(135deg, #6A0032, #A30D45);
     }
     
     body[data-theme='princess'] {
-        --bg-primary: #fce4ec; --bg-secondary: #fff; --bg-tertiary: #f8bbd0; --bg-backdrop: rgba(252, 228, 236, 0.8);
+        --bg-primary: #fce4ec; --bg-primary-values-rgb: 252, 228, 236; --bg-secondary: #fff; --bg-tertiary: #f8bbd0; --bg-backdrop: rgba(252, 228, 236, 0.8);
         --text-primary: #4a148c; --text-secondary: #8e24aa; --text-tertiary: #c158dc;
         --accent-primary: #ff4081; --accent-secondary: #f50057; --accent-primary-text: #ffffff; --accent-primary-values: 255, 64, 129;
         --border-primary: #f8bbd0; --border-secondary: #f48fb1;
         --success: #00c853; --success-text: #ffffff; --success-bg-subtle: rgba(0, 200, 83, 0.1); --success-border: rgba(0,200,83,0.3); --success-cashed-out-bg: rgba(0, 200, 83, 0.08); --success-cashed-out-text: #007d43;
         --danger: #d50000; --danger-text: #ffffff; --danger-bg-subtle: rgba(213, 0, 0, 0.1); --danger-border: rgba(213,0,0,0.3);
         --warning: #ffab00; --warning-text: #ffffff; --warning-bg-subtle: rgba(255, 171, 0, 0.1); --warning-border: rgba(255, 171, 0, 0.3);
-        --shadow-color: rgba(136, 14, 79, 0.15);
         --bg-primary-gradient: linear-gradient(135deg, #fce4ec, #f8eaf2);
     }
     
     body[data-theme='ocean'] {
-        --bg-primary: #e0f7fa; --bg-secondary: rgba(255, 255, 255, 0.8); --bg-tertiary: #b2ebf2; --bg-backdrop: rgba(0, 95, 115, 0.7);
+        --bg-primary: #e0f7fa; --bg-primary-values-rgb: 224, 247, 250; --bg-secondary: rgba(255, 255, 255, 0.8); --bg-tertiary: #b2ebf2; --bg-backdrop: rgba(0, 95, 115, 0.7);
         --text-primary: #005f73; --text-secondary: #0077b6; --text-tertiary: #0096c7;
         --accent-primary: #00b4d8; --accent-secondary: #90e0ef; --accent-primary-text: #005f73; --accent-primary-values: 0, 180, 216;
         --border-primary: #b2ebf2; --border-secondary: #80deea;
         --success: #2e8b57; --success-text: #ffffff; --success-bg-subtle: rgba(46, 139, 87, 0.15); --success-border: rgba(46,139,87,0.4); --success-cashed-out-bg: rgba(46, 139, 87, 0.1); --success-cashed-out-text: #2e8b57;
         --danger: #ff7f50; --danger-text: #ffffff; --danger-bg-subtle: rgba(255, 127, 80, 0.2); --danger-border: rgba(255,127,80,0.4);
         --warning: #f4a460; --warning-text: #005f73; --warning-bg-subtle: rgba(244, 164, 96, 0.2); --warning-border: rgba(244, 164, 96, 0.4);
-        --shadow-color: rgba(0, 95, 115, 0.2);
         --bg-primary-gradient: linear-gradient(to bottom, #e0f7fa, #ade8f4);
     }
 
     body[data-theme='beach'] {
-        --bg-primary: #fefae0; --bg-secondary: #ffffff; --bg-tertiary: #faedcd; --bg-backdrop: rgba(212, 163, 115, 0.7);
+        --bg-primary: #fefae0; --bg-primary-values-rgb: 254, 250, 224; --bg-secondary: #ffffff; --bg-tertiary: #faedcd; --bg-backdrop: rgba(212, 163, 115, 0.7);
         --text-primary: #023047; --text-secondary: #219ebc; --text-tertiary: #8ecae6;
         --accent-primary: #fb8500; --accent-secondary: #e27700; --accent-primary-text: #ffffff; --accent-primary-values: 251, 133, 0;
         --border-primary: #faedcd; --border-secondary: #d4a373;
         --success: #2a9d8f; --success-text: #ffffff; --success-bg-subtle: rgba(42, 157, 143, 0.15); --success-border: rgba(42, 157, 143, 0.4); --success-cashed-out-bg: rgba(42, 157, 143, 0.1); --success-cashed-out-text: #2a9d8f;
         --danger: #e63946; --danger-text: #ffffff; --danger-bg-subtle: rgba(230, 57, 70, 0.2); --danger-border: rgba(230, 57, 70, 0.4);
         --warning: #ffb703; --warning-text: #023047; --warning-bg-subtle: rgba(255, 183, 3, 0.2); --warning-border: rgba(255, 183, 3, 0.4);
-        --shadow-color: rgba(188, 143, 101, 0.15);
         --bg-primary-gradient: linear-gradient(to bottom, #fefae0, #e0f7fa);
     }
     
     body[data-theme='action'] {
-        --bg-primary: #f8f9fa; --bg-secondary: #ffffff; --bg-tertiary: #e9ecef; --bg-backdrop: rgba(20, 20, 20, 0.6);
+        --bg-primary: #f8f9fa; --bg-primary-values-rgb: 248, 249, 250; --bg-secondary: #ffffff; --bg-tertiary: #e9ecef; --bg-backdrop: rgba(20, 20, 20, 0.6);
         --text-primary: #212529; --text-secondary: #6c757d; --text-tertiary: #adb5bd;
         --accent-primary: #00C9A7; --accent-secondary: #00A98F; --accent-primary-text: #ffffff; --accent-primary-values: 0, 201, 167;
         --border-primary: #dee2e6; --border-secondary: #ced4da;
         --success: #28a745; --success-text: #ffffff; --success-bg-subtle: rgba(40, 167, 69, 0.1); --success-border: rgba(40, 167, 69, 0.3); --success-cashed-out-bg: rgba(40, 167, 69, 0.2); --success-cashed-out-text: #1d7a33;
         --danger: #dc3545; --danger-text: #ffffff; --danger-bg-subtle: rgba(220, 53, 69, 0.1); --danger-border: rgba(220, 53, 69, 0.3);
         --warning: #ffc107; --warning-text: #212529; --warning-bg-subtle: rgba(255, 193, 7, 0.1); --warning-border: rgba(255, 193, 7, 0.3);
-        --shadow-color: rgba(0, 0, 0, 0.1);
         --bg-primary-gradient: var(--bg-primary) url("data:image/svg+xml,%3Csvg width='300' height='300' xmlns='http://www.w3.org/2000/svg'%3E%3Cg stroke='%23343a40' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round' opacity='.05'%3E%3Cpath d='M89.2 63.3c-2.4 1-4.7 2.1-7 3.2-5.7 2.8-11.4 5.6-17.1 8.4-1.2.6-2.3 1.1-3.5 1.7m13.2-19.2c-2.4 1-4.7 2.1-7 3.2-5.7 2.8-11.4 5.6-17.1 8.4-1.2.6-2.3 1.1-3.5 1.7'/%3E%3Cpath d='M76 44.1c-1.2.6-2.3 1.1-3.5 1.7-5.7 2.8-11.4 5.6-17.1 8.4-2.4 1-4.7 2.1-7 3.2l-3.2-6.3c-1-2-3-3.2-5.2-3.2h-7.8c-2.2 0-4.2 1.2-5.2 3.2l-3.2 6.3c-2.3-1-4.6-2.1-6.9-3.2-5.7-2.8-11.4-5.6-17.1-8.4-1.2-.6-2.4-1.1-3.5-1.7'/%3E%3Cpath d='M225.8 59.1c-1.3 0-2.6-.5-3.5-1.5-1-1-1.5-2.3-1.5-3.5 0-2.8 2.2-5 5-5s5 2.2 5 5c0 1.3-.5 2.6-1.5 3.5-1 1-2.2 1.5-3.5 1.5z'/%3E%3Cpath d='M237.1 76.5c-4.9-4.9-12.8-4.9-17.7 0-4.9 4.9-4.9 12.8 0 17.7 2.5 2.5 5.7 3.7 8.9 3.7s6.4-1.2 8.9-3.7c4.9-4.9 4.9-12.8-.1-17.7z'/%3E%3Cpath d='M230.9 59.1c-1.3 0-2.6-.5-3.5-1.5-1-1-1.5-2.3-1.5-3.5 0-2.8 2.2-5 5-5s5 2.2 5 5c0 1.3-.5 2.6-1.5 3.5-1 1-2.2 1.5-3.5 1.5z'/%3E%3Cpath d='M104.2 214.2c-5.7 0-11.4-2.2-15.8-6.6-4.4-4.4-6.6-10.1-6.6-15.8s2.2-11.4 6.6-15.8c4.4-4.4 10.1-6.6 15.8-6.6s11.4 2.2 15.8 6.6c4.4 4.4 6.6 10.1 6.6 15.8s-2.2 11.4-6.6 15.8c-4.4 4.4-10.1 6.6-15.8 6.6z'/%3E%3Cpath d='M104.2 181.2v-11.3m21.1 53.3l-7.9-7.9m-26.3 0l-8 7.9m-8-26.3l-11.3 0m53.3 21.1l-7.9 8m26.3 26.3l8 7.9m-7.9 26.3l7.9 8m-26.3 7.9l-8 8'/%3E%3Cpath d='M169.2 181.2c5.7 0 11.4-2.2 15.8-6.6 4.4-4.4 6.6-10.1 6.6-15.8s-2.2-11.4-6.6-15.8c-4.4-4.4-10.1-6.6-15.8-6.6s-11.4 2.2-15.8 6.6c-4.4 4.4-6.6 10.1-6.6 15.8s2.2 11.4 6.6 15.8c4.4 4.4 10.1 6.6 15.8 6.6z'/%3E%3Cpath d='M169.2 148.2v11.3m-21.1-53.3l7.9 7.9m26.3 0l8-7.9m8 26.3l11.3 0m-53.3-21.1l7.9 8m26.3 26.3l8 7.9m-7.9 26.3l7.9 8m-26.3 7.9l-8 8'/%3E%3Cpath d='M120.1 172.3l21.1-37.4 28 0'/%3E%3C/g%3E%3C/svg%3E") repeat;
     }
 
@@ -230,33 +214,34 @@ const ThemeStyles = () => (
       overflow: hidden;
       overscroll-behavior-y: none;
     }
-    
-    @keyframes pulse-add-chore {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
+
+    .glass-header-container {
+        background: rgba(var(--bg-primary-values-rgb), 0.75);
+        -webkit-backdrop-filter: blur(12px);
+        backdrop-filter: blur(12px);
     }
-    .animate-pulse-add-chore {
-      background: linear-gradient(270deg, var(--accent-primary), var(--accent-secondary), var(--accent-primary));
-      background-size: 400% 400%;
-      animation: pulse-add-chore 3.5s ease-in-out infinite;
+
+    .parent-fade-mask-bottom {
+        -webkit-mask-image: linear-gradient(to top, transparent 0%, black 2.5rem);
+        mask-image: linear-gradient(to top, transparent 0%, black 2.5rem);
     }
-    @keyframes pulse-bonus {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
-    }
-    .animate-pulse-bonus {
-      background: linear-gradient(270deg, #facc15, #f59e0b);
-      background-size: 200% 200%;
-      animation: pulse-bonus 4s ease-in-out infinite;
-    }
-    .kids-fade-mask {
-      -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 5rem, black 100%);
-      mask-image: linear-gradient(to bottom, transparent 0, black 5rem, black 100%);
+    .parent-fade-mask-bottom-weekly {
+        -webkit-mask-image: linear-gradient(to top, transparent 0%, black 1.25rem);
+        mask-image: linear-gradient(to top, transparent 0%, black 1.25rem);
     }
   `}</style>
 );
+
+const themeColors: { [key: string]: string } = {
+  'light': '#f1f5f9',
+  'dark': '#020617',
+  'dark-blue': '#4364F7',
+  'lions': '#A30D45',
+  'princess': '#fce4ec',
+  'ocean': '#e0f7fa',
+  'beach': '#fefae0',
+  'action': '#f8f9fa',
+};
 
 const App: React.FC = () => {
   // Multi-child state management
@@ -278,7 +263,8 @@ const App: React.FC = () => {
   const [pendingBonusNotificationsByProfile, setPendingBonusNotificationsByProfile] = usePersistentState<Record<string, BonusNotification[]>>('pendingBonusNotificationsByProfile', {});
 
   const mainScrollRef = useRef<HTMLElement>(null);
-  const [showTopFade, setShowTopFade] = useState(false);
+  const [showParentBottomFade, setShowParentBottomFade] = useState(false);
+
 
   const hasCompletedOnboarding = useMemo(() => profiles.length > 0, [profiles]);
   const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState<boolean>(!hasCompletedOnboarding);
@@ -318,17 +304,28 @@ const App: React.FC = () => {
   const [draggingChoreId, setDraggingChoreId] = useState<string | null>(null);
   const [dragOverChoreId, setDragOverChoreId] = useState<string | null>(null);
 
-  // Data migration for adding areSoundsEnabled to existing parentSettings
+  const isTouchDevice = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  }, []);
+
+  // Data migration for areSoundsEnabled
   useEffect(() => {
-    if (!hasCompletedOnboarding) return;
-    
-    setParentSettings(prev => {
-      if (prev.hasOwnProperty('areSoundsEnabled')) {
-        return prev;
-      }
-      return { ...prev, areSoundsEnabled: true };
-    });
-  }, [hasCompletedOnboarding, setParentSettings]);
+    const pSettings = localStorage.getItem('parentSettings');
+    if (pSettings) {
+        try {
+            const parsed = JSON.parse(pSettings);
+            if (parsed.areSoundsEnabled === undefined) {
+                setParentSettings(prev => ({
+                    ...prev,
+                    areSoundsEnabled: true // Default to true for existing users
+                }));
+            }
+        } catch (e) {
+            // Ignore parse errors, the main loader will handle it
+        }
+    }
+  }, [setParentSettings]);
 
   // Data migration for showPotentialEarnings from parentSettings to Profile
   useEffect(() => {
@@ -397,7 +394,7 @@ const App: React.FC = () => {
   const pendingCashOuts = useMemo(() => (activeProfileId ? pendingCashOutsByProfile[activeProfileId] : []) || [], [pendingCashOutsByProfile, activeProfileId]);
   const pastChoreApprovals = useMemo(() => (activeProfileId ? pastChoreApprovalsByProfile[activeProfileId] : []) || [], [pastChoreApprovalsByProfile, activeProfileId]);
   
-  // Effect to set the active theme on the body
+  // Effect to set the active theme on the body and update browser theme color
   useEffect(() => {
     let currentTheme = 'light';
     if (isKidsMode) {
@@ -408,6 +405,11 @@ const App: React.FC = () => {
         currentTheme = parentSettings.theme || 'light';
     }
     document.body.setAttribute('data-theme', currentTheme);
+
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeColorMeta) {
+      themeColorMeta.setAttribute('content', themeColors[currentTheme] || '#f1f5f9');
+    }
   }, [isKidsMode, activeProfile, parentSettings.theme]);
   
   // Effect for migrating old chore data to include 'order' property
@@ -1141,58 +1143,152 @@ useEffect(() => {
   useEffect(() => {
     if (isKidsMode && isToday) {
       const todayString = formatDate(new Date());
+
+      // Only scroll if at least one chore is marked as complete.
+      const hasCompletedChoresToday = filteredChores.some(
+        chore => ['completed', 'cashed_out', 'pending_cash_out'].includes(chore.completions[todayString])
+      );
+
+      if (!hasCompletedChoresToday) {
+        return; // Don't scroll if nothing is done yet.
+      }
+      
       const firstUncompletedChoreIndex = filteredChores.findIndex(
         chore => !['completed', 'cashed_out', 'pending_cash_out'].includes(chore.completions[todayString])
       );
 
       if (firstUncompletedChoreIndex !== -1) {
         const firstUncompletedChore = filteredChores[firstUncompletedChoreIndex];
+        
         setTimeout(() => {
-          const targetElement = document.getElementById(`chore-${firstUncompletedChore.id}`);
-          const scrollContainer = mainScrollRef.current;
-          
-          if (!targetElement || !scrollContainer) return;
+            // Determine if target should be category header.
+            let targetElement: HTMLElement | null = null;
+            const isFirstInCategory = 
+                firstUncompletedChoreIndex === 0 || 
+                (filteredChores[firstUncompletedChoreIndex - 1].category !== firstUncompletedChore.category);
 
-          if (firstUncompletedChoreIndex > 0) {
-            const previousChore = filteredChores[firstUncompletedChoreIndex - 1];
-            const previousElement = document.getElementById(`chore-${previousChore.id}`);
-            
-            if (previousElement) {
-              const offset = previousElement.offsetHeight / 2;
-              scrollContainer.scrollTo({
-                top: targetElement.offsetTop - offset,
-                behavior: 'smooth',
-              });
-            } else {
-              targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (isFirstInCategory && firstUncompletedChore.category) {
+                const categoryId = `category-header-${firstUncompletedChore.category.replace(/\s+/g, '-').toLowerCase()}`;
+                targetElement = document.getElementById(categoryId);
             }
-          } else {
-            targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }
+            
+            // Fallback to the chore card itself if header not found or not applicable.
+            if (!targetElement) {
+                targetElement = document.getElementById(`chore-${firstUncompletedChore.id}`);
+            }
+          
+            const scrollContainer = mainScrollRef.current;
+            if (!targetElement || !scrollContainer) return;
+
+            if (firstUncompletedChoreIndex > 0) {
+                const previousChore = filteredChores[firstUncompletedChoreIndex - 1];
+                const previousElement = document.getElementById(`chore-${previousChore.id}`);
+                
+                if (previousElement) {
+                    // Use full height of previous chore for offset.
+                    const offset = previousElement.offsetHeight;
+                    scrollContainer.scrollTo({
+                        top: targetElement.offsetTop - offset,
+                        behavior: 'smooth',
+                    });
+                } else {
+                    // Fallback if previous element isn't found
+                    scrollContainer.scrollTo({
+                        top: targetElement.offsetTop,
+                        behavior: 'smooth',
+                    });
+                }
+            } else {
+                // This is the first element in the list, scroll it to the top.
+                scrollContainer.scrollTo({
+                    top: targetElement.offsetTop,
+                    behavior: 'smooth',
+                });
+            }
         }, 150);
       }
     }
   }, [isKidsMode, isToday, filteredChores, activeProfileId]);
 
-  // Effect for fade on scroll in kids mode
+  // Effect for fade on scroll
   useEffect(() => {
     const scrollContainer = mainScrollRef.current;
-    if (!isKidsMode || !scrollContainer) {
-        setShowTopFade(false);
-        return;
-    }
+    if (!scrollContainer) return;
 
     const handleScroll = () => {
-        setShowTopFade(scrollContainer.scrollTop > 20);
+        if (!isKidsMode) {
+            const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+            const showFade = scrollHeight - scrollTop - clientHeight > 20;
+            setShowParentBottomFade(showFade);
+        }
     };
-
-    handleScroll();
-
+    
+    handleScroll(); // Initial check
     scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+    
+    // Also re-check when content changes
+    const resizeObserver = new ResizeObserver(handleScroll);
+    resizeObserver.observe(scrollContainer);
+
     return () => {
         scrollContainer.removeEventListener('scroll', handleScroll);
+        resizeObserver.unobserve(scrollContainer);
     };
-}, [isKidsMode, activeProfileId, chores]);
+}, [isKidsMode, activeProfileId, chores, viewMode]);
+
+// Effect for swiping between views in parent mode
+useEffect(() => {
+    if (isKidsMode || !isTouchDevice) return;
+
+    const swipeTarget = mainScrollRef.current;
+    if (!swipeTarget) return;
+
+    let touchstartX = 0;
+    let touchstartY = 0;
+    let touchendX = 0;
+    let touchendY = 0;
+
+    const handleTouchStart = (e: TouchEvent) => {
+        touchstartX = e.changedTouches[0].screenX;
+        touchstartY = e.changedTouches[0].screenY;
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+        touchendX = e.changedTouches[0].screenX;
+        touchendY = e.changedTouches[0].screenY;
+        handleSwipe();
+    };
+
+    const handleSwipe = () => {
+        const deltaX = touchendX - touchstartX;
+        const deltaY = touchendY - touchstartY;
+        
+        // We want horizontal swipes, so deltaX should be much larger than deltaY
+        if (Math.abs(deltaX) < 50 || Math.abs(deltaX) < Math.abs(deltaY) * 1.5) {
+            return; // Not a significant horizontal swipe
+        }
+
+        if (touchendX < touchstartX) { // Swiped left
+            if (viewMode === 'weekly') {
+                setViewMode('daily');
+            }
+        }
+
+        if (touchendX > touchstartX) { // Swiped right
+            if (viewMode === 'daily') {
+                setViewMode('weekly');
+            }
+        }
+    };
+
+    swipeTarget.addEventListener('touchstart', handleTouchStart);
+    swipeTarget.addEventListener('touchend', handleTouchEnd);
+
+    return () => {
+        swipeTarget.removeEventListener('touchstart', handleTouchStart);
+        swipeTarget.removeEventListener('touchend', handleTouchEnd);
+    };
+}, [isKidsMode, isTouchDevice, viewMode, setViewMode]);
 
   // Effect for automatic pay day cash outs
   useEffect(() => {
@@ -1275,18 +1371,28 @@ useEffect(() => {
   }
 
   const showAddChorePulse = !isKidsMode && filteredChores.length === 0;
+  
+  let parentFadeClass = '';
+  if (!isKidsMode) {
+    if (viewMode === 'weekly') {
+      parentFadeClass = 'parent-fade-mask-bottom-weekly';
+    } else if (showParentBottomFade) {
+      parentFadeClass = 'parent-fade-mask-bottom';
+    }
+  }
 
   return (
-    <div className={`min-h-screen text-[var(--text-primary)] relative bg-[var(--bg-primary)] ${isKidsMode ? 'h-screen flex flex-col' : ''}`}>
+    <div className={`h-screen flex flex-col text-[var(--text-primary)] relative bg-[var(--bg-primary)]`}>
       <ThemeStyles />
-      <div className={`container mx-auto p-4 sm:p-6 md:p-8 transition-all duration-300 ${isKidsMode ? 'flex-1 flex flex-col overflow-hidden' : ''}`}>
-        <header>
+      <header className="sticky top-0 z-30 glass-header-container">
+        <div className="container mx-auto px-4 sm:px-6 md:px-8 py-4">
           <MenuBanner
             isKidsMode={isKidsMode} onSwitchToChild={handleSwitchToChild}
             onAttemptSwitchToParentMode={handleAttemptSwitchToParentMode}
             pendingCount={pendingCashOuts.length} onShowPending={handleOpenPendingModal}
             profiles={profiles} activeProfileId={activeProfileId}
-            onEditProfile={handleOpenEditModalForProfile} onShowOptionsModal={() => setIsOptionsMenuOpen(true)}
+            onEditProfile={handleOpenEditModalForProfile}
+            onShowOptionsModal={() => setIsOptionsMenuOpen(true)}
             onShowAddChildModal={() => setIsAddChildModalOpen(true)} onShowThemeModal={() => setIsThemeModalOpen(true)}
             pastApprovalsCount={pastChoreApprovals.length} onShowPastApprovals={() => setIsPastApprovalModalOpen(true)}
             menuPulse={isThemeModalOpen && isFirstTimeThemePrompt}
@@ -1302,16 +1408,20 @@ useEffect(() => {
             currentWeekDays={currentWeekDays} handlePreviousWeek={handlePreviousWeek}
             handleNextWeek={handleNextWeek} isViewingCurrentWeek={isViewingCurrentWeek}
             handleGoToCurrentWeek={handleGoToCurrentWeek} onUpdateProfileImage={handleUpdateProfileImage}
+            isTouchDevice={isTouchDevice}
+            onEditCurrentProfile={handleOpenEditModalForProfile}
           />
-        </header>
-        
-        <main ref={mainScrollRef} className={`${isKidsMode ? 'flex-1 overflow-y-auto relative' : ''} ${showTopFade ? 'kids-fade-mask' : ''}`}>
+        </div>
+      </header>
+      
+      <main ref={mainScrollRef} className={`flex-1 overflow-y-auto relative ${parentFadeClass}`}>
+        <div className="container mx-auto px-4 sm:px-6 md:px-8">
             {!isKidsMode && profiles.length > 1 && (
-                <div className="mb-6 p-3 bg-[var(--bg-tertiary)] rounded-2xl">
+                <div className="mb-6 mt-4 p-3 bg-[var(--bg-tertiary)] rounded-2xl">
                     <h3 className="text-sm font-semibold text-[var(--text-secondary)] mb-2 text-center">Managing Chores For</h3>
                     <div className="flex justify-center gap-2 flex-wrap">
                         {profiles.map(p => (
-                            <button key={p.id} onClick={() => setActiveProfileId(p.id)} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all duration-300 ${activeProfileId === p.id ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)] shadow-md' : 'bg-[var(--bg-secondary)] hover:opacity-80 text-[var(--text-primary)]'}`}>
+                            <button key={p.id} onClick={() => setActiveProfileId(p.id)} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all duration-300 ${activeProfileId === p.id ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)] shadow-lg' : 'bg-[var(--bg-secondary)] hover:opacity-80 text-[var(--text-primary)]'}`}>
                                 {p.image ? <img src={p.image} alt={p.name} className="w-6 h-6 rounded-full object-cover"/> : <UserCircleIcon className="w-6 h-6" />}
                                 <span>{p.name}</span>
                             </button>
@@ -1320,38 +1430,35 @@ useEffect(() => {
                 </div>
             )}
             
-            {!isKidsMode && (
-              <div className="mb-6 flex items-stretch gap-4">
-                <button
-                  onClick={handleOpenAddModal}
-                  className={`flex-1 flex items-center justify-center gap-2 bg-[var(--accent-primary)] hover:bg-[var(--accent-secondary)] text-[var(--accent-primary-text)] font-bold py-3 px-5 rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-px transition-all ${showAddChorePulse ? 'animate-pulse-add-chore' : ''}`}>
-                  <PlusIcon /><span>Add Chore</span>
-                </button>
-                <button
-                  onClick={() => setIsBonusModalOpen(true)}
-                  className="flex-1 flex items-center justify-center gap-2 text-white font-bold py-3 px-5 rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-px transition-all animate-pulse-bonus"
-                >
-                  <StarIcon className="h-6 w-6" />
-                  <span>Pay Bonus</span>
-                </button>
-              </div>
-            )}
-          <ChoreList
-            chores={filteredChores} currentWeekDays={currentWeekDays} onToggleCompletion={handleToggleCompletion}
-            onEditChore={isKidsMode ? undefined : handleOpenEditModal} viewMode={displayMode} selectedDate={selectedDate}
-            isKidsMode={isKidsMode} onReorderChores={handleReorderChores} pastChoreApprovals={pastChoreApprovals}
-            onApprovePastChore={isKidsMode ? undefined : handleApprovePastChore} draggingChoreId={draggingChoreId}
-            dragOverChoreId={dragOverChoreId} onDragStartTouch={handleDragStartTouch}
+            <ChoreList
+              chores={filteredChores} currentWeekDays={currentWeekDays} onToggleCompletion={handleToggleCompletion}
+              onEditChore={isKidsMode ? undefined : handleOpenEditModal} viewMode={displayMode} selectedDate={selectedDate}
+              isKidsMode={isKidsMode} onReorderChores={handleReorderChores} pastChoreApprovals={pastChoreApprovals}
+              onApprovePastChore={isKidsMode ? undefined : handleApprovePastChore} draggingChoreId={draggingChoreId}
+              dragOverChoreId={dragOverChoreId} onDragStartTouch={handleDragStartTouch}
+              areSoundsEnabled={parentSettings.areSoundsEnabled}
+            />
+            
+            {/* Spacer for the parent action bar */}
+            {!isKidsMode && <div className="h-24" />}
+        </div>
+      </main>
+
+      {!isKidsMode && (
+          <ActionBar 
+            onAddChore={handleOpenAddModal} 
+            onPayBonus={() => setIsBonusModalOpen(true)} 
+            pulseAddChore={showAddChorePulse} 
             areSoundsEnabled={parentSettings.areSoundsEnabled}
           />
-        </main>
-      </div>
+      )}
+
       <EarningsHistoryModal isOpen={isHistoryModalOpen} onClose={handleCloseHistoryModal} history={earningsHistory} onUpdateAmount={handleUpdateHistoryAmount} />
       <PendingCashOutsModal isOpen={isPendingModalOpen} onClose={handleClosePendingModal} pendingCashOuts={pendingCashOuts} onOpenReview={handleOpenReviewModal} />
       {recordToReview && <ReviewCashOutModal isOpen={!!recordToReview} onClose={() => setRecordToReview(null)} record={recordToReview} onApprove={handleApproveReviewedCashOut} profileName={activeProfile?.name || ''} />}
       <PastChoresApprovalModal isOpen={isPastApprovalModalOpen} onClose={() => setIsPastApprovalModalOpen(false)} approvals={pastChoreApprovals} onApprove={handleApprovePastChore} onDismiss={handleDismissPastChore} onApproveAll={handleApproveAllPastChores} onDismissAll={handleDismissAllPastChores} />
-      <CashOutConfirmationModal isOpen={isCashOutConfirmOpen} onClose={() => setIsCashOutConfirmOpen(false)} amount={cashedOutAmount} />
-      <AllChoresDoneModal isOpen={isAllChoresDoneModalOpen} onClose={() => setIsAllChoresDoneModalOpen(false)} dailyAmount={dailyEarningsForModal} />
+      <CashOutConfirmationModal isOpen={isCashOutConfirmOpen} onClose={() => setIsCashOutConfirmOpen(false)} amount={cashedOutAmount} areSoundsEnabled={parentSettings.areSoundsEnabled} />
+      <AllChoresDoneModal isOpen={isAllChoresDoneModalOpen} onClose={() => setIsAllChoresDoneModalOpen(false)} dailyAmount={dailyEarningsForModal} areSoundsEnabled={parentSettings.areSoundsEnabled} />
       {isEditProfileModalOpen && profileToEdit && (<EditProfileModal isOpen={isEditProfileModalOpen} onClose={() => { setIsEditProfileModalOpen(false); setProfileToEdit(null); }} onSave={handleUpdateProfile} onDelete={handleDeleteProfile} initialData={profileToEdit} />)}
       <PasscodeSetupModal isOpen={isPasscodeSetupModalOpen} onClose={() => setIsPasscodeSetupModalOpen(false)} onSave={handlePasscodeSetupSuccess} />
       <PasscodeEntryModal isOpen={isPasscodeEntryModalOpen} onClose={() => setIsPasscodeEntryModalOpen(false)} onSuccess={handlePasscodeEntrySuccess} passcodeToMatch={parentSettings.passcode} onForgotPassword={handleOpenForgotPassword} />

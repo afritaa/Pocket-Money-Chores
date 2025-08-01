@@ -1,5 +1,3 @@
-
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Profile } from '../types';
 import { MenuIcon, UserCircleIcon, PencilIcon, PaintBrushIcon, SettingsIcon, ExclamationIcon } from '../constants';
@@ -34,14 +32,15 @@ const MenuBanner: React.FC<MenuBannerProps> = ({
     todaysTotalChores, todaysCompletedChores
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const settingsMenuRef = useRef<HTMLDivElement>(null);
   const activeProfile = profiles.find(p => p.id === activeProfileId);
   
   const [messageIndex, setMessageIndex] = useState(0);
 
   const bannerClasses = `
-    relative h-16 w-full flex items-center justify-between px-3 sm:px-4 md:px-6 z-40
-    bg-[var(--bg-secondary)] border border-[var(--border-primary)] shadow-xl rounded-2xl mb-8
+    relative h-16 w-full flex items-center justify-between z-40 mb-4
   `;
 
   useEffect(() => {
@@ -49,12 +48,13 @@ const MenuBanner: React.FC<MenuBannerProps> = ({
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsMenuOpen(false);
       }
+      if (settingsMenuRef.current && !settingsMenuRef.current.contains(event.target as Node)) {
+        setIsSettingsMenuOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const kidsTitle = activeProfile?.name ? `${activeProfile.name}'s Chores` : 'Kids Mode';
 
   const motivationalMessage = useMemo(() => {
     if (!isKidsMode) return "";
@@ -63,10 +63,10 @@ const MenuBanner: React.FC<MenuBannerProps> = ({
     const total = todaysTotalChores;
 
     if (total === 0) return "Earning Mode 💰";
-    if (completed === total) return "You’ve smashed it! 🤯";
+    if (completed === total) return "You've smashed it! 🤯";
     if (total > 2 && total - completed <= 2) return "Almost there! 🤩";
     if (total > 2 && completed >= total / 2) return "Cha-Ching! 🤑";
-    if (completed >= 2) return "You’ve got this! 👊";
+    if (completed >= 2) return "You've got this! 👊";
     
     return "Earning Mode 💰";
   }, [isKidsMode, todaysCompletedChores, todaysTotalChores]);
@@ -75,12 +75,17 @@ const MenuBanner: React.FC<MenuBannerProps> = ({
   const shouldShowPotential = showPotentialEarnings && potentialEarnings > 0 && activeProfile?.payDayConfig.mode !== 'anytime';
   
   const messagesToShow = useMemo(() => {
-      const msgs = [motivationalMessage];
-      if (shouldShowPotential) {
-          msgs.push(potentialMessage);
-      }
-      return msgs;
-  }, [motivationalMessage, potentialMessage, shouldShowPotential]);
+    const msgs = [motivationalMessage];
+    if (shouldShowPotential) {
+        msgs.push(potentialMessage);
+    } else if (isKidsMode && activeProfile?.payDayConfig.mode === 'anytime') {
+        const extraMessage = "You've got this! 👊";
+        if (motivationalMessage !== extraMessage) {
+            msgs.push(extraMessage);
+        }
+    }
+    return msgs.filter(m => m);
+  }, [motivationalMessage, potentialMessage, shouldShowPotential, isKidsMode, activeProfile]);
   
   useEffect(() => {
       if (messagesToShow.length > 1) {
@@ -101,13 +106,13 @@ const MenuBanner: React.FC<MenuBannerProps> = ({
           <div className={`absolute -inset-1.5 rounded-lg ${menuPulse ? 'animate-pulse-strong' : ''}`} aria-hidden="true" />
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="relative z-10 p-2 rounded-lg text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors"
+            className="relative z-10 p-2 rounded-lg text-[var(--text-primary)] hover:bg-white/20 transition-colors"
             aria-label="Open menu"
           >
             <MenuIcon className="h-8 w-8" />
           </button>
           {isMenuOpen && (
-            <div className="absolute top-full left-0 mt-2 w-72 rounded-lg py-1 z-50 bg-[var(--bg-secondary)] border border-[var(--border-primary)] shadow-2xl animate-fade-in-fast">
+            <div className="absolute top-full left-0 mt-2 w-72 rounded-lg py-1 z-50 bg-[var(--bg-secondary)] border border-[var(--border-primary)] animate-fade-in-fast">
               <div className="py-1">
                   {profiles.map(p => (
                       <div key={p.id} className={`flex items-center justify-between pr-2 transition-colors ${isKidsMode && activeProfileId === p.id ? 'bg-[var(--bg-tertiary)]' : ''} hover:bg-[var(--bg-tertiary)]`}>
@@ -135,43 +140,30 @@ const MenuBanner: React.FC<MenuBannerProps> = ({
                       Parent Mode
                   </button>
               </div>
-               {!isKidsMode && (
+               {isKidsMode && (
                 <div className="py-1 border-t border-[var(--border-primary)]">
-                  <button onClick={() => { onShowOptionsModal(); setIsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] flex items-center gap-3">
-                      <SettingsIcon className="w-5 h-5 text-[var(--text-secondary)]" />
-                      <span>Options</span>
-                  </button>
-                </div>
-              )}
-              <div className="py-1 border-t border-[var(--border-primary)]">
                   <button onClick={() => { onShowThemeModal(); setIsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] flex items-center gap-3">
                       <PaintBrushIcon className="w-5 h-5 text-[var(--text-secondary)]" />
                       <span>Change Theme</span>
                   </button>
-              </div>
+                </div>
+              )}
             </div>
           )}
         </div>
-        {!isKidsMode && (
-          <h1 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)]">
-            Pocket Money Chores
-          </h1>
-        )}
+        <h1 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)] truncate">
+          {isKidsMode
+            ? (activeProfile?.name ? `${activeProfile.name}'s Pocket Money Chores.` : 'Pocket Money Chores.')
+            : 'Pocket Money Chores.'}
+        </h1>
       </div>
       
-       {/* CENTER GROUP (KIDS MODE) */}
-      {isKidsMode && (
-         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-            <h1 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)] truncate whitespace-nowrap px-4">
-              {kidsTitle}
-            </h1>
-        </div>
-      )}
+       {/* CENTER GROUP (KIDS MODE) - This is now handled on the left */}
 
       {/* RIGHT GROUP */}
       <div className="flex items-center gap-2 sm:gap-4">
         {!isKidsMode && pendingCount > 0 && (
-           <button onClick={onShowPending} className="relative flex items-center gap-2 font-bold text-[var(--warning-text)] bg-[var(--warning)] py-2 px-3 sm:px-4 rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-px transition-all animate-fade-in text-sm sm:text-base">
+           <button onClick={onShowPending} className="relative flex items-center gap-2 font-bold text-[var(--warning-text)] bg-[var(--warning)] py-2 px-3 sm:px-4 rounded-lg transform hover:-translate-y-px transition-all animate-fade-in text-sm sm:text-base">
             <span>Pending</span>
             <span className="hidden sm:inline">Cash Outs</span>
             <span className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--danger)] text-xs font-bold text-[var(--danger-text)] ring-2 ring-[var(--warning)] animate-pulse">
@@ -191,11 +183,24 @@ const MenuBanner: React.FC<MenuBannerProps> = ({
                 </span>
             </button>
         )}
-        {!isKidsMode && pendingCount === 0 && pastApprovalsCount === 0 && showPotentialEarnings && potentialEarnings > 0 && activeProfile?.payDayConfig.mode !== 'anytime' && (
-            <div className="hidden md:flex items-baseline gap-2 font-semibold text-sm text-[var(--text-secondary)] animate-fade-in">
-                <span>Potential:</span>
-                <span className="font-bold text-lg text-[var(--text-primary)]">${(potentialEarnings / 100).toFixed(2)}</span>
-            </div>
+        {!isKidsMode && (
+           <div className="relative" ref={settingsMenuRef}>
+              <button onClick={() => setIsSettingsMenuOpen(prev => !prev)} className="relative p-2 rounded-full text-[var(--text-primary)] hover:bg-white/20 transition-colors">
+                  <SettingsIcon className="h-7 w-7" />
+              </button>
+              {isSettingsMenuOpen && (
+                  <div className="absolute top-full right-0 mt-2 w-60 rounded-lg py-1 z-50 bg-[var(--bg-secondary)] border border-[var(--border-primary)] animate-fade-in-fast">
+                      <button onClick={() => { onShowOptionsModal(); setIsSettingsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] flex items-center gap-3">
+                          <SettingsIcon className="w-5 h-5 text-[var(--text-secondary)]" />
+                          <span>Options</span>
+                      </button>
+                      <button onClick={() => { onShowThemeModal(); setIsSettingsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] flex items-center gap-3">
+                          <PaintBrushIcon className="w-5 h-5 text-[var(--text-secondary)]" />
+                          <span>Change Theme</span>
+                      </button>
+                  </div>
+              )}
+          </div>
         )}
         {isKidsMode && (
           <div key={currentMessage} className="font-semibold text-sm sm:text-base hidden sm:inline animate-fade-in text-[var(--warning)]">
@@ -211,9 +216,12 @@ const MenuBanner: React.FC<MenuBannerProps> = ({
         .animate-fade-in-fast { animation: fade-in-fast 0.2s ease-out forwards; }
 
         @keyframes pulse-strong {
-          0% { box-shadow: 0 0 0 0px rgba(var(--accent-primary-values), 0.5); }
-          70% { box-shadow: 0 0 0 10px rgba(var(--accent-primary-values), 0); }
-          100% { box-shadow: 0 0 0 0px rgba(var(--accent-primary-values), 0); }
+          0%, 100% {
+            background-color: transparent;
+          }
+          50% {
+            background-color: rgba(var(--accent-primary-values), 0.2);
+          }
         }
         .animate-pulse-strong {
             animation: pulse-strong 2s infinite;

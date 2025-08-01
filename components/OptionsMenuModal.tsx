@@ -1,7 +1,4 @@
 
-
-
-
 import React, { useState, useEffect } from 'react';
 import { ParentSettings, Profile } from '../types';
 import { SettingsIcon, UserCircleIcon, PencilIcon } from '../constants';
@@ -83,8 +80,8 @@ const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({ isOpen, onClose, se
     const settingsUpdate: Partial<ParentSettings> = {};
     if (choreValueInCents !== settings.defaultChoreValue) settingsUpdate.defaultChoreValue = choreValueInCents;
     if (bonusValueInCents !== settings.defaultBonusValue) settingsUpdate.defaultBonusValue = bonusValueInCents;
-    if (areSoundsEnabled !== settings.areSoundsEnabled) settingsUpdate.areSoundsEnabled = areSoundsEnabled;
     if (newPasscode) settingsUpdate.passcode = newPasscode;
+    if (areSoundsEnabled !== settings.areSoundsEnabled) settingsUpdate.areSoundsEnabled = areSoundsEnabled;
     
     if (Object.keys(settingsUpdate).length > 0) {
         onUpdateSettings(settingsUpdate);
@@ -130,10 +127,7 @@ const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({ isOpen, onClose, se
                     </div>
                 </div>
                  <div className="flex items-center justify-between pt-4 mt-4 border-t border-[var(--border-primary)]">
-                    <label htmlFor="sound-toggle" className="flex-grow cursor-pointer">
-                        <span className="font-medium text-[var(--text-primary)]">Enable Sound Effects</span>
-                        <p className="text-sm text-[var(--text-secondary)]">Play sounds for actions like completing a chore.</p>
-                    </label>
+                    <label htmlFor="sound-toggle" className="font-medium text-[var(--text-primary)]">Enable Sound Effects</label>
                     <button
                         id="sound-toggle"
                         type="button"

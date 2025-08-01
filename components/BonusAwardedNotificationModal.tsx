@@ -1,11 +1,7 @@
 
-
-
-
-
-
 import React, { useMemo, useEffect } from 'react';
 import useSound from '../hooks/useSound';
+import { BONUS_NOTIFY_SOUND } from '../sounds';
 
 interface BonusAwardedNotificationModalProps {
   isOpen: boolean;
@@ -19,11 +15,11 @@ interface BonusAwardedNotificationModalProps {
 
 const BonusAwardedNotificationModal: React.FC<BonusAwardedNotificationModalProps> = ({ isOpen, onClose, bonus, areSoundsEnabled }) => {
   const { amount, note } = bonus;
-  const playBonusSound = useSound('/sounds/bonus-notify.mp3', areSoundsEnabled);
+  const playBonusSound = useSound(BONUS_NOTIFY_SOUND, areSoundsEnabled);
 
   useEffect(() => {
     if (isOpen) {
-        playBonusSound();
+      playBonusSound();
     }
   }, [isOpen, playBonusSound]);
 

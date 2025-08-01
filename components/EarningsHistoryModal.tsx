@@ -178,7 +178,7 @@ const EarningsHistoryModal: React.FC<EarningsHistoryModalProps> = ({ isOpen, onC
                                 <button
                                     key={p}
                                     onClick={() => setGraphPeriod(p)}
-                                    className={`w-full px-3 py-1 text-xs sm:text-sm font-semibold rounded-md transition-all duration-300 ${graphPeriod === p ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)] shadow-md' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]'}`}
+                                    className={`w-full px-3 py-1 text-xs sm:text-sm font-semibold rounded-md transition-all duration-300 ${graphPeriod === p ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]'}`}
                                 >
                                     {p}
                                 </button>
@@ -207,7 +207,7 @@ const EarningsHistoryModal: React.FC<EarningsHistoryModalProps> = ({ isOpen, onC
             onClick={onClose}
         >
             <div
-                className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl shadow-2xl p-6 sm:p-8 m-4 w-full max-w-2xl transform transition-all text-[var(--text-primary)]"
+                className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl p-6 sm:p-8 m-4 w-full max-w-2xl transform transition-all text-[var(--text-primary)]"
                 onClick={e => e.stopPropagation()}
             >
                 <h2 className="text-2xl font-bold mb-6 text-center">Earnings Analysis</h2>
@@ -231,7 +231,7 @@ const EarningsHistoryModal: React.FC<EarningsHistoryModalProps> = ({ isOpen, onC
                 <div className="flex justify-end mt-8">
                     <button
                         onClick={onClose}
-                        className="px-6 py-2 rounded-lg text-[var(--accent-primary-text)] bg-[var(--accent-primary)] hover:bg-[var(--accent-secondary)] font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-px transition-all"
+                        className="px-6 py-2 rounded-lg text-[var(--accent-primary-text)] bg-[var(--accent-primary)] hover:bg-[var(--accent-secondary)] font-semibold transform hover:-translate-y-px transition-all"
                     >
                         Close
                     </button>

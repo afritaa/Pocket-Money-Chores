@@ -37,8 +37,8 @@ const PayDaySettingsEditor = ({ config, onConfigChange, profileName }: { config:
             {(mode === 'manual' || mode === 'automatic') && (
                 <div className="p-4 bg-[var(--bg-tertiary)] rounded-lg border border-[var(--border-secondary)] space-y-4 animate-fade-in-fast">
                     <div className="flex bg-[var(--bg-secondary)] p-1 rounded-full">
-                        <button type="button" onClick={() => onConfigChange({ ...config, mode: 'manual' })} className={`w-1/2 py-1.5 text-sm font-semibold rounded-full transition-all ${mode === 'manual' ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)] shadow-md' : 'text-[var(--text-secondary)]'}`}>Manual</button>
-                        <button type="button" onClick={() => onConfigChange({ ...config, mode: 'automatic', time: config.time || '18:00' })} className={`w-1/2 py-1.5 text-sm font-semibold rounded-full transition-all ${mode === 'automatic' ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)] shadow-md' : 'text-[var(--text-secondary)]'}`}>Automatic</button>
+                        <button type="button" onClick={() => onConfigChange({ ...config, mode: 'manual' })} className={`w-1/2 py-1.5 text-sm font-semibold rounded-full transition-all ${mode === 'manual' ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)]' : 'text-[var(--text-secondary)]'}`}>Manual</button>
+                        <button type="button" onClick={() => onConfigChange({ ...config, mode: 'automatic', time: config.time || '18:00' })} className={`w-1/2 py-1.5 text-sm font-semibold rounded-full transition-all ${mode === 'automatic' ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)]' : 'text-[var(--text-secondary)]'}`}>Automatic</button>
                     </div>
                     {mode === 'manual' && <p className="text-xs text-[var(--text-secondary)] text-center">{profileName} can only see the Cash Out button and request payment on this selected day.</p>}
                     {mode === 'automatic' && <p className="text-xs text-[var(--text-secondary)] text-center">Have a regular pay day already? No worries! Set it below and a request will be automatically sent each week telling you how much {profileName} has earned!</p>}
@@ -47,7 +47,7 @@ const PayDaySettingsEditor = ({ config, onConfigChange, profileName }: { config:
                         <label className="text-sm font-medium text-[var(--text-secondary)]">Pay Day of the Week</label>
                         <div className="grid grid-cols-4 md:grid-cols-7 gap-2">
                             {DAYS_OF_WEEK.map(d => (
-                                <button key={d} type="button" onClick={() => onConfigChange({ ...config, day: d })} className={`py-2 rounded-lg font-bold text-sm transition-all ${day === d ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)] shadow-lg' : 'bg-[var(--bg-secondary)] hover:opacity-80 border border-[var(--border-primary)]'}`}>
+                                <button key={d} type="button" onClick={() => onConfigChange({ ...config, day: d })} className={`py-2 rounded-lg font-bold text-sm transition-all ${day === d ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)]' : 'bg-[var(--bg-secondary)] hover:opacity-80 border border-[var(--border-primary)]'}`}>
                                     {d.slice(0, 3)}
                                 </button>
                             ))}
@@ -114,14 +114,14 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, on
 
   return (
     <div className="fixed inset-0 bg-[var(--bg-backdrop)] backdrop-blur-sm flex justify-center items-center z-50 transition-opacity" onClick={onClose}>
-      <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl shadow-2xl p-8 m-4 w-full max-w-lg transform transition-all max-h-[90vh] overflow-y-auto text-[var(--text-primary)] custom-scrollbar" onClick={e => e.stopPropagation()}>
+      <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl p-8 m-4 w-full max-w-lg transform transition-all max-h-[90vh] overflow-y-auto text-[var(--text-primary)] custom-scrollbar" onClick={e => e.stopPropagation()}>
         <div className='text-center mb-6'>
           <h2 className="text-2xl font-bold">Edit {initialData.name}'s Profile</h2>
         </div>
         {error && <p className="bg-[var(--danger-bg-subtle)] text-[var(--danger)] p-3 rounded-lg mb-4 border border-[var(--danger-border)]">{error}</p>}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="flex flex-col items-center space-y-4">
-            {image ? <img src={image} alt="Profile" className="h-24 w-24 rounded-full object-cover border-2 border-[var(--border-secondary)] shadow-lg" /> : <UserCircleIcon className="h-24 w-24 text-[var(--text-tertiary)]" />}
+            {image ? <img src={image} alt="Profile" className="h-24 w-24 rounded-full object-cover border-2 border-[var(--border-secondary)]" /> : <UserCircleIcon className="h-24 w-24 text-[var(--text-tertiary)]" />}
             <label htmlFor="profile-image-upload" className="cursor-pointer px-4 py-2 rounded-lg text-sm text-[var(--text-primary)] bg-[var(--bg-tertiary)] hover:opacity-80 font-semibold border border-[var(--border-secondary)] transition-all">Change Picture</label>
             <input id="profile-image-upload" type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
           </div>
@@ -153,7 +153,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, on
           
           <div className="pt-6 mt-6 border-t border-[var(--border-primary)] flex justify-end space-x-4">
             <button type="button" onClick={onClose} className="px-6 py-2 rounded-lg text-[var(--text-primary)] bg-[var(--bg-tertiary)] hover:opacity-80 border border-[var(--border-secondary)] font-semibold transition-colors">Cancel</button>
-            <button type="submit" className="px-6 py-2 rounded-lg text-[var(--success-text)] bg-[var(--success)] hover:opacity-80 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-px transition-all">Save Profile</button>
+            <button type="submit" className="px-6 py-2 rounded-lg text-[var(--success-text)] bg-[var(--success)] hover:opacity-80 font-semibold transform hover:-translate-y-px transition-all">Save Profile</button>
           </div>
         </form>
         <div className="pt-6 mt-6 border-t border-red-500/30">

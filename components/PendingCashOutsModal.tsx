@@ -23,7 +23,7 @@ const PendingCashOutsModal: React.FC<PendingCashOutsModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl shadow-2xl p-8 m-4 w-full max-w-lg transform transition-all text-[var(--text-primary)]"
+        className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl p-8 m-4 w-full max-w-lg transform transition-all text-[var(--text-primary)]"
         onClick={e => e.stopPropagation()}
       >
         <h2 className="text-2xl font-bold mb-6">Pending Cash Outs</h2>
@@ -45,7 +45,7 @@ const PendingCashOutsModal: React.FC<PendingCashOutsModalProps> = ({
                   </div>
                   <button
                     onClick={() => onOpenReview(record)}
-                    className="px-4 py-1 rounded-lg text-sm text-[var(--success-text)] bg-[var(--success)] hover:opacity-80 font-semibold shadow-md transition-all"
+                    className="px-4 py-1 rounded-lg text-sm text-[var(--success-text)] bg-[var(--success)] hover:opacity-80 font-semibold transition-all"
                   >
                     Review & Approve
                   </button>

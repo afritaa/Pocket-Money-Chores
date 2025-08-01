@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { KeyIcon } from '../constants';
+import { LockClosedIcon } from '../constants';
 
 interface PasscodeEntryModalProps {
   isOpen: boolean;
@@ -42,7 +42,7 @@ const PasscodeEntryModal: React.FC<PasscodeEntryModalProps> = ({ isOpen, onClose
         onClick={e => e.stopPropagation()}
       >
         <div className="flex justify-center mb-4">
-            <KeyIcon className="h-12 w-12 text-[var(--accent-primary)]" />
+            <LockClosedIcon className="h-12 w-12 text-[var(--accent-primary)]" />
         </div>
         <h2 className="text-2xl font-bold mb-2">Enter Passcode</h2>
         <p className="text-[var(--text-secondary)] mb-6">Enter the 4-digit passcode to access parent mode.</p>

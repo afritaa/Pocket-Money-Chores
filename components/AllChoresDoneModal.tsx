@@ -1,13 +1,24 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import useSound from '../hooks/useSound';
+import { ALL_CHORES_DONE_SOUND } from '../sounds';
 
 interface AllChoresDoneModalProps {
   isOpen: boolean;
   onClose: () => void;
   dailyAmount: number;
+  areSoundsEnabled: boolean;
 }
 
-const AllChoresDoneModal: React.FC<AllChoresDoneModalProps> = ({ isOpen, onClose, dailyAmount }) => {
+const AllChoresDoneModal: React.FC<AllChoresDoneModalProps> = ({ isOpen, onClose, dailyAmount, areSoundsEnabled }) => {
+  const playAllDoneSound = useSound(ALL_CHORES_DONE_SOUND, areSoundsEnabled);
+
+  useEffect(() => {
+    if (isOpen) {
+      playAllDoneSound();
+    }
+  }, [isOpen, playAllDoneSound]);
+  
   if (!isOpen) return null;
 
   return (

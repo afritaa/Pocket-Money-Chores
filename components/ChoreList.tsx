@@ -1,6 +1,4 @@
 
-
-
 import React from 'react';
 import { Chore, PastChoreApproval } from '../types';
 import ChoreCard from './ChoreCard';
@@ -72,10 +70,12 @@ const ChoreList: React.FC<ChoreListProps> = ({
           return null;
         }
 
+        const categoryId = `category-header-${category.replace(/\s+/g, '-').toLowerCase()}`;
+
         return (
           <div key={category}>
             {showHeaders && (
-              <h3 className="text-lg font-bold mb-4 ml-1 text-[var(--text-secondary)] tracking-wider uppercase">
+              <h3 id={categoryId} className="text-lg font-bold mb-4 ml-1 text-[var(--text-secondary)] tracking-wider uppercase">
                 {category}
               </h3>
             )}

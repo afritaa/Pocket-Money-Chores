@@ -52,7 +52,6 @@ export const CoinIcon = ({ className }: { className?: string }) => (
             fontSize="11"
             fontWeight="bold"
             fill="white"
-            style={{textShadow: '0px 1px 2px rgba(0,0,0,0.2)'}}
         >
             $
         </text>
@@ -84,8 +83,8 @@ export const StarIcon = ({ className }: { className?: string }) => (
     </svg>
 );
 
-export const PencilIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+export const PencilIcon = ({ className }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className || "h-5 w-5"} viewBox="0 0 20 20" fill="currentColor">
     <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
     <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />
   </svg>
@@ -103,20 +102,15 @@ export const UserCircleIcon = ({ className }: { className?: string }) => (
     </svg>
   );
 
-export const DragHandleIcon = () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-slate-400 cursor-grab">
-        <circle cx="9" cy="6" r="1.5" fill="currentColor"/>
-        <circle cx="15" cy="6" r="1.5" fill="currentColor"/>
-        <circle cx="9" cy="12" r="1.5" fill="currentColor"/>
-        <circle cx="15" cy="12" r="1.5" fill="currentColor"/>
-        <circle cx="9" cy="18" r="1.5" fill="currentColor"/>
-        <circle cx="15" cy="18" r="1.5" fill="currentColor"/>
-    </svg>
-);
-
 export const KeyIcon = ({ className }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className || "h-6 w-6"} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H5v-2H3v-2H1v-4a6 6 0 016-6h4a6 6 0 016 6z" />
+    </svg>
+);
+
+export const LockClosedIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className || "h-6 w-6"} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
     </svg>
 );
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { KeyIcon } from '../constants';
+import { LockClosedIcon } from '../constants';
 
 interface PasscodeSetupModalProps {
   isOpen: boolean;
@@ -35,11 +35,11 @@ const PasscodeSetupModal: React.FC<PasscodeSetupModalProps> = ({ isOpen, onClose
       onClick={onClose}
     >
       <div 
-        className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl shadow-2xl p-8 m-4 w-full max-w-sm transform transition-all text-center text-[var(--text-primary)]"
+        className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl p-8 m-4 w-full max-w-sm transform transition-all text-center text-[var(--text-primary)]"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex justify-center mb-4">
-            <KeyIcon className="h-12 w-12 text-[var(--accent-primary)]" />
+            <LockClosedIcon className="h-12 w-12 text-[var(--accent-primary)]" />
         </div>
         <h2 className="text-2xl font-bold mb-2">Create Parent Passcode</h2>
         <p className="text-[var(--text-secondary)] mb-6">Create a 4-digit passcode to secure Parent Mode.</p>
@@ -73,19 +73,11 @@ const PasscodeSetupModal: React.FC<PasscodeSetupModalProps> = ({ isOpen, onClose
               className="w-full px-4 py-3 text-center tracking-[1em] text-lg bg-[var(--bg-tertiary)] border-[var(--border-secondary)] border rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] transition-all"
             />
           </div>
-          
-          <div className="flex justify-end space-x-4 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-6 py-2 rounded-lg text-[var(--text-primary)] bg-[var(--bg-tertiary)] hover:opacity-80 border border-[var(--border-secondary)] font-semibold transition-colors"
-            >
+          <div className="flex justify-end space-x-4 pt-4 mt-4">
+            <button type="button" onClick={onClose} className="px-6 py-2 rounded-lg text-[var(--text-primary)] bg-[var(--bg-tertiary)] hover:opacity-80 border border-[var(--border-secondary)] font-semibold transition-colors">
               Cancel
             </button>
-            <button
-              type="submit"
-              className="px-6 py-2 rounded-lg text-[var(--accent-primary-text)] bg-[var(--accent-primary)] hover:bg-[var(--accent-secondary)] font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-px transition-all"
-            >
+            <button type="submit" className="px-6 py-2 rounded-lg text-[var(--accent-primary-text)] bg-[var(--accent-primary)] hover:bg-[var(--accent-secondary)] font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-px transition-all">
               Save Passcode
             </button>
           </div>

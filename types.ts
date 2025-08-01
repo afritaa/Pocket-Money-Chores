@@ -1,6 +1,4 @@
 
-
-
 export interface BonusNotification {
   id: string;
   amount: number;
@@ -55,7 +53,7 @@ export interface CompletionSnapshot {
 }
 
 export interface EarningsRecord {
-  id: string;
+  id:string;
   date: string; // Date of cash-out request
   amount: number; // Final approved amount
   completionsSnapshot?: CompletionSnapshot[]; // Snapshot of what was completed

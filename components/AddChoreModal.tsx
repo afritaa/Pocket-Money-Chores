@@ -151,7 +151,7 @@ const ChoreFormModal: React.FC<ChoreFormModalProps> = ({ isOpen, onClose, onSave
       onClick={onClose}
     >
       <div
-        className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl shadow-2xl p-6 sm:p-8 m-4 w-full max-w-lg transform transition-all text-[var(--text-primary)] max-h-[90vh] overflow-y-auto custom-scrollbar"
+        className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl p-6 sm:p-8 m-4 w-full max-w-lg transform transition-all text-[var(--text-primary)] max-h-[90vh] overflow-y-auto custom-scrollbar"
         onClick={e => e.stopPropagation()}
       >
         <h2 className="text-2xl font-bold mb-6 text-center">{isBonusEdit ? 'Edit Bonus' : initialData ? 'Edit Chore' : 'Add New Chore'}</h2>
@@ -176,8 +176,8 @@ const ChoreFormModal: React.FC<ChoreFormModalProps> = ({ isOpen, onClose, onSave
             <label htmlFor="chore-value" className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Value</label>
             <div className="flex items-center gap-2">
               <div className="flex rounded-lg bg-[var(--bg-tertiary)] p-1 self-stretch border border-[var(--border-secondary)]">
-                <button type="button" onClick={() => handleUnitChange('dollars')} className={`px-4 py-2 text-base font-semibold rounded-md transition-all ${valueUnit === 'dollars' ? 'bg-[var(--bg-secondary)] text-[var(--accent-primary)] shadow-sm' : 'text-[var(--text-secondary)]'}`}>$</button>
-                <button type="button" onClick={() => handleUnitChange('cents')} className={`px-4 py-2 text-base font-semibold rounded-md transition-all ${valueUnit === 'cents' ? 'bg-[var(--bg-secondary)] text-[var(--accent-primary)] shadow-sm' : 'text-[var(--text-secondary)]'}`}>¢</button>
+                <button type="button" onClick={() => handleUnitChange('dollars')} className={`px-4 py-2 text-base font-semibold rounded-md transition-all ${valueUnit === 'dollars' ? 'bg-[var(--bg-secondary)] text-[var(--accent-primary)]' : 'text-[var(--text-secondary)]'}`}>$</button>
+                <button type="button" onClick={() => handleUnitChange('cents')} className={`px-4 py-2 text-base font-semibold rounded-md transition-all ${valueUnit === 'cents' ? 'bg-[var(--bg-secondary)] text-[var(--accent-primary)]' : 'text-[var(--text-secondary)]'}`}>¢</button>
               </div>
               <input
                 id="chore-value"
@@ -219,7 +219,7 @@ const ChoreFormModal: React.FC<ChoreFormModalProps> = ({ isOpen, onClose, onSave
               <div>
                 <span className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Repeat on Days</span>
                  <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <button type="button" onClick={handleSelectAllDays} className="text-xs font-semibold px-2 py-1 rounded-md bg-[var(--bg-tertiary)] hover:opacity-80 border border-[var(--border-primary)]">All</button>
+                    <button type="button" onClick={handleSelectAllDays} className="text-xs font-semibold px-2 py-1 rounded-md bg-[var(--bg-tertiary)] hover:opacity-80 border border-[var(--border-primary)]">Everyday</button>
                     <button type="button" onClick={() => setDays([Day.Mon, Day.Tue, Day.Wed, Day.Thu, Day.Fri])} className="text-xs font-semibold px-2 py-1 rounded-md bg-[var(--bg-tertiary)] hover:opacity-80 border border-[var(--border-primary)]">Weekdays</button>
                     <button type="button" onClick={() => setDays([Day.Sat, Day.Sun])} className="text-xs font-semibold px-2 py-1 rounded-md bg-[var(--bg-tertiary)] hover:opacity-80 border border-[var(--border-primary)]">Weekends</button>
                     <button type="button" onClick={handleDeselectAllDays} className="text-xs font-semibold px-2 py-1 rounded-md bg-[var(--bg-tertiary)] hover:opacity-80 border border-[var(--border-primary)]">None</button>
@@ -232,7 +232,7 @@ const ChoreFormModal: React.FC<ChoreFormModalProps> = ({ isOpen, onClose, onSave
                       onClick={() => handleDayToggle(day)}
                       className={`py-2 rounded-lg font-bold transition-all duration-300 ${
                         days.includes(day)
-                          ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)] shadow-lg'
+                          ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)]'
                           : 'bg-[var(--bg-tertiary)] hover:opacity-80 text-[var(--text-primary)] border border-[var(--border-secondary)]'
                       }`}
                     >
@@ -252,7 +252,7 @@ const ChoreFormModal: React.FC<ChoreFormModalProps> = ({ isOpen, onClose, onSave
                       onClick={() => setCategory(prev => prev === cat ? null : cat)}
                       className={`px-4 py-2 rounded-lg font-semibold transition-all text-sm ${
                         category === cat
-                          ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)] shadow-md'
+                          ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)]'
                           : 'bg-[var(--bg-tertiary)] hover:opacity-80 border border-[var(--border-secondary)]'
                       }`}
                     >
@@ -303,7 +303,7 @@ const ChoreFormModal: React.FC<ChoreFormModalProps> = ({ isOpen, onClose, onSave
             </div>
             <div className="flex justify-end space-x-4">
               <button type="button" onClick={onClose} className="px-6 py-2 rounded-lg text-[var(--text-primary)] bg-[var(--bg-tertiary)] hover:opacity-80 border border-[var(--border-secondary)] font-semibold transition-colors">Cancel</button>
-              <button type="submit" className="px-6 py-2 rounded-lg text-[var(--success-text)] bg-[var(--success)] hover:opacity-80 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-px transition-all">{initialData ? 'Save Changes' : 'Add Chore'}</button>
+              <button type="submit" className="px-6 py-2 rounded-lg text-[var(--success-text)] bg-[var(--success)] hover:opacity-80 font-semibold transform hover:-translate-y-px transition-all">{initialData ? 'Save Changes' : 'Add Chore'}</button>
             </div>
           </div>
         </form>

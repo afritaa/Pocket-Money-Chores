@@ -12,7 +12,7 @@ interface DayButtonProps {
   isPendingCashOut: boolean;
   isToday: boolean;
   isPast: boolean;
-  onClick: () => void;
+  onClick: (e: React.MouseEvent) => void;
   isKidsMode: boolean;
   isPendingApproval: boolean;
   isBonus: boolean;
@@ -24,15 +24,15 @@ const DayButton: React.FC<DayButtonProps> = ({ day, isAssigned, isCompleted, isC
   const isDisabled = !isAssigned || isBonus || (isKidsMode && (isCashedOut || isPendingCashOut));
 
   if (isBonus) {
-    dynamicClasses = `bg-[var(--warning)] text-[var(--warning-text)] shadow-lg`;
+    dynamicClasses = `bg-[var(--warning)] text-[var(--warning-text)]`;
   } else if (isCashedOut) {
-    dynamicClasses = 'bg-[var(--success-cashed-out-bg)] text-[var(--success-cashed-out-text)] shadow-inner';
+    dynamicClasses = 'bg-[var(--success-cashed-out-bg)] text-[var(--success-cashed-out-text)]';
   } else if (isPendingCashOut) {
     dynamicClasses = 'bg-[var(--bg-tertiary)] opacity-70';
   } else if (isCompleted) {
-    dynamicClasses = 'bg-[var(--success)] text-[var(--success-text)] shadow-lg';
+    dynamicClasses = 'bg-[var(--success)] text-[var(--success-text)]';
   } else if (isPendingApproval) {
-    dynamicClasses = `bg-[var(--warning)] text-[var(--warning-text)] shadow-lg ${!isKidsMode ? 'cursor-pointer' : ''}`;
+    dynamicClasses = `bg-[var(--warning)] text-[var(--warning-text)] ${!isKidsMode ? 'cursor-pointer' : ''}`;
   } else if (isAssigned) {
     dynamicClasses = 'bg-[var(--bg-tertiary)] hover:opacity-80 border border-[var(--border-secondary)] cursor-pointer text-[var(--text-primary)]';
   } else {
