@@ -1,7 +1,6 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ParentSettings, Profile } from '../types';
-import { SettingsIcon, UserCircleIcon, PencilIcon } from '../constants';
+import { SettingsIcon, UserCircleIcon, PencilIcon, ArrowDownOnSquareIcon, TrashIcon } from '../constants';
 
 interface OptionsMenuModalProps {
   isOpen: boolean;
@@ -10,18 +9,16 @@ interface OptionsMenuModalProps {
   onUpdateSettings: (newSettings: Partial<ParentSettings>) => void;
   profiles: Profile[];
   onEditProfile: (profileId: string) => void;
+  onInstallApp: () => void;
+  canInstall: boolean;
+  onResetApp: () => void;
 }
 
-const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({ isOpen, onClose, settings, onUpdateSettings, profiles, onEditProfile }) => {
+const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({ isOpen, onClose, settings, onUpdateSettings, profiles, onEditProfile, onInstallApp, canInstall, onResetApp }) => {
   const [defaultChoreValue, setDefaultChoreValue] = useState(String(settings.defaultChoreValue || 20));
   const [defaultChoreUnit, setDefaultChoreUnit] = useState<'cents' | 'dollars'>('cents');
   const [defaultBonusValue, setDefaultBonusValue] = useState(String(settings.defaultBonusValue || 100));
   const [defaultBonusUnit, setDefaultBonusUnit] = useState<'cents' | 'dollars'>('cents');
-  const [areSoundsEnabled, setAreSoundsEnabled] = useState(settings.areSoundsEnabled ?? true);
-  
-  const [currentPasscode, setCurrentPasscode] = useState('');
-  const [newPasscode, setNewPasscode] = useState('');
-  const [confirmNewPasscode, setConfirmNewPasscode] = useState('');
   
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -30,10 +27,6 @@ const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({ isOpen, onClose, se
     if (isOpen) {
       setError('');
       setSuccess('');
-      setCurrentPasscode('');
-      setNewPasscode('');
-      setConfirmNewPasscode('');
-      setAreSoundsEnabled(settings.areSoundsEnabled ?? true);
       
       const choreValueInCents = settings.defaultChoreValue || 20;
       if (choreValueInCents >= 100 && choreValueInCents % 100 === 0) {
@@ -55,16 +48,9 @@ const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({ isOpen, onClose, se
     }
   }, [isOpen, settings]);
   
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     setError('');
     setSuccess('');
-
-    if (newPasscode) {
-        if (settings.passcode && !currentPasscode) { setError("Please enter your current passcode to change it."); return; }
-        if (settings.passcode && currentPasscode !== settings.passcode) { setError("Current passcode is incorrect."); return; }
-        if (!/^\d{4}$/.test(newPasscode)) { setError("New passcode must be 4 digits."); return; }
-        if (newPasscode !== confirmNewPasscode) { setError("New passcodes don't match."); return; }
-    }
 
     const choreValueRaw = parseFloat(defaultChoreValue);
     if (isNaN(choreValueRaw) || choreValueRaw < 0) { setError("Default chore value must be a positive number."); return; }
@@ -80,8 +66,6 @@ const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({ isOpen, onClose, se
     const settingsUpdate: Partial<ParentSettings> = {};
     if (choreValueInCents !== settings.defaultChoreValue) settingsUpdate.defaultChoreValue = choreValueInCents;
     if (bonusValueInCents !== settings.defaultBonusValue) settingsUpdate.defaultBonusValue = bonusValueInCents;
-    if (newPasscode) settingsUpdate.passcode = newPasscode;
-    if (areSoundsEnabled !== settings.areSoundsEnabled) settingsUpdate.areSoundsEnabled = areSoundsEnabled;
     
     if (Object.keys(settingsUpdate).length > 0) {
         onUpdateSettings(settingsUpdate);
@@ -90,7 +74,22 @@ const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({ isOpen, onClose, se
     } else {
         onClose();
     }
-  };
+  }, [defaultChoreValue, defaultChoreUnit, defaultBonusValue, defaultBonusUnit, onUpdateSettings, onClose, settings]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key === 'Enter') {
+          handleSave();
+        }
+    };
+    if (isOpen) {
+        document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, handleSave]);
+
 
   if (!isOpen) return null;
 
@@ -99,11 +98,28 @@ const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({ isOpen, onClose, se
       <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl shadow-2xl p-6 sm:p-8 m-4 w-full max-w-lg transform transition-all text-[var(--text-primary)] max-h-[90vh] overflow-y-auto custom-scrollbar" onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-3 mb-6 justify-center">
             <SettingsIcon className="h-8 w-8 text-[var(--accent-primary)]" />
-            <h2 className="text-2xl font-bold text-[var(--text-primary)]">Options</h2>
+            <h2 className="text-2xl font-bold text-[var(--text-primary)]">Settings</h2>
         </div>
         {error && <p className="bg-[var(--danger-bg-subtle)] text-[var(--danger)] p-3 rounded-lg mb-4 text-sm border border-[var(--danger-border)]">{error}</p>}
         {success && <p className="bg-[var(--success-bg-subtle)] text-[var(--success)] p-3 rounded-lg mb-4 text-sm border border-[var(--success-border)]">{success}</p>}
         <div className="space-y-6">
+            {canInstall && (
+                <div className="p-4 border border-[var(--border-secondary)] rounded-lg bg-[var(--accent-primary)] bg-opacity-10 animate-fade-in-fast">
+                    <div className="flex justify-between items-center gap-4">
+                        <div className="flex-grow">
+                            <h3 className="text-lg font-semibold text-[var(--accent-primary)]">Install App</h3>
+                            <p className="text-sm text-[var(--text-secondary)] mt-1">Get a native app experience by installing <span className="whitespace-nowrap">Pocket Money Chores.</span> on your device.</p>
+                        </div>
+                        <button 
+                            onClick={onInstallApp}
+                            className="flex-shrink-0 flex items-center gap-2 px-4 py-3 rounded-lg text-sm text-[var(--accent-primary-text)] bg-[var(--accent-primary)] hover:bg-[var(--accent-secondary)] font-semibold shadow-lg transition-all"
+                        >
+                            <ArrowDownOnSquareIcon className="w-5 h-5" />
+                            Install
+                        </button>
+                    </div>
+                </div>
+            )}
             <fieldset className="space-y-4 p-4 border border-[var(--border-secondary)] rounded-lg">
                 <legend className="text-lg font-semibold px-2 text-[var(--text-secondary)]">General Settings</legend>
                 <div>
@@ -126,17 +142,6 @@ const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({ isOpen, onClose, se
                         <input id="default-bonus-value" type="number" value={defaultBonusValue} onChange={e => setDefaultBonusValue(e.target.value)} min="0" step={defaultBonusUnit === 'dollars' ? '0.01' : '1'} className="w-32 px-4 py-2 bg-[var(--bg-tertiary)] border-[var(--border-secondary)] border rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] transition-all"/>
                     </div>
                 </div>
-                 <div className="flex items-center justify-between pt-4 mt-4 border-t border-[var(--border-primary)]">
-                    <label htmlFor="sound-toggle" className="font-medium text-[var(--text-primary)]">Enable Sound Effects</label>
-                    <button
-                        id="sound-toggle"
-                        type="button"
-                        onClick={() => setAreSoundsEnabled(p => !p)}
-                        className={`relative inline-flex flex-shrink-0 h-6 w-11 items-center rounded-full transition-colors ${areSoundsEnabled ? 'bg-[var(--accent-primary)]' : 'bg-[var(--bg-tertiary)]'}`}
-                    >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${areSoundsEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-                    </button>
-                </div>
             </fieldset>
 
             <fieldset className="space-y-3 p-4 border border-[var(--border-secondary)] rounded-lg">
@@ -147,7 +152,7 @@ const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({ isOpen, onClose, se
                             {p.image ? <img src={p.image} alt={p.name} className="w-8 h-8 rounded-full object-cover"/> : <UserCircleIcon className="w-8 h-8" />}
                             <span className="font-semibold">{p.name}</span>
                         </div>
-                        <button onClick={() => onEditProfile(p.id)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-lg bg-[var(--bg-secondary)] hover:opacity-80 border border-[var(--border-primary)] transition-all">
+                        <button onClick={() => { onEditProfile(p.id); onClose(); }} className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-lg bg-[var(--bg-secondary)] hover:opacity-80 border border-[var(--border-primary)] transition-all">
                             <PencilIcon />
                             <span>Edit</span>
                         </button>
@@ -155,14 +160,12 @@ const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({ isOpen, onClose, se
                 ))}
             </fieldset>
 
-            <fieldset className="space-y-4 p-4 border border-[var(--border-secondary)] rounded-lg">
-                 <legend className="px-2">
-                    <div className="text-lg font-semibold text-[var(--text-secondary)]">Parent Lock</div>
-                    <p className="text-sm text-[var(--text-secondary)] font-normal mt-1">This prevents your child from accessing Parent Mode.</p>
-                 </legend>
-                {settings.passcode && (<div><label htmlFor="current-passcode-options" className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Current Passcode</label><input id="current-passcode-options" type="password" inputMode="numeric" autoFocus maxLength={4} value={currentPasscode} onChange={e => setCurrentPasscode(e.target.value.replace(/\D/g, ''))} className="w-full px-4 py-2 bg-[var(--bg-tertiary)] border-[var(--border-secondary)] border rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] transition-all"/></div>)}
-                <div><label htmlFor="new-passcode-options" className="block text-sm font-medium text-[var(--text-secondary)] mb-2">{settings.passcode ? 'New' : 'Set'} 4-Digit Passcode</label><input id="new-passcode-options" type="password" inputMode="numeric" maxLength={4} value={newPasscode} onChange={e => setNewPasscode(e.target.value.replace(/\D/g, ''))} className="w-full px-4 py-2 bg-[var(--bg-tertiary)] border-[var(--border-secondary)] border rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] transition-all"/></div>
-                {newPasscode && (<div className="animate-fade-in-fast"><label htmlFor="confirm-new-passcode-options" className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Confirm New Passcode</label><input id="confirm-new-passcode-options" type="password" inputMode="numeric" maxLength={4} value={confirmNewPasscode} onChange={e => setConfirmNewPasscode(e.target.value.replace(/\D/g, ''))} className="w-full px-4 py-2 bg-[var(--bg-tertiary)] border-[var(--border-secondary)] border rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] transition-all"/></div>)}
+             <fieldset className="space-y-3 p-4 border border-[var(--border-secondary)] rounded-lg">
+                <legend className="text-lg font-semibold px-2 text-[var(--text-secondary)]">Account</legend>
+                 <button onClick={onResetApp} className="w-full flex items-center justify-center gap-2 text-[var(--danger)] bg-transparent hover:bg-[var(--danger-bg-subtle)] font-semibold py-2 px-4 rounded-lg transition-colors border border-transparent hover:border-[var(--danger-border)]">
+                    <TrashIcon />
+                    <span>Reset App</span>
+                </button>
             </fieldset>
 
             <div className="flex justify-end space-x-4 pt-4">

@@ -65,9 +65,15 @@ export const CheckIcon = ({ className }: { className?: string }) => (
 );
 
 
-export const PlusIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+export const PlusIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className || "h-6 w-6"} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+    </svg>
+);
+
+export const XIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className || "h-6 w-6"} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
     </svg>
 );
 
@@ -114,6 +120,12 @@ export const LockClosedIcon = ({ className }: { className?: string }) => (
     </svg>
 );
 
+export const LogoutIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className || "h-6 w-6"} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+    </svg>
+);
+
 export const SunIcon = ({ className }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className || "h-6 w-6"} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -132,10 +144,9 @@ export const MenuIcon = ({ className }: { className?: string }) => (
     </svg>
 );
 
-export const PaintBrushIcon = ({ className }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className || "h-6 w-6"} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.47 2.118v-.07a2.25 2.25 0 012.24-1.994 2.25 2.25 0 001.08-4.43M12 21h3.386M12 17.25h3.386m0 0a3.375 3.375 0 004.28-4.282M15.386 17.25a3.375 3.375 0 01-4.28-4.282m0 0a3.375 3.375 0 014.28 4.282m0 0v-.008c0-.344.276-.625.625-.625h.008a.625.625 0 01.625.625v.008c0 .344-.276.625-.625.625h-.008a.625.625 0 01-.625-.625z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c-1.933 0-3.5 1.567-3.5 3.5S10.067 10 12 10s3.5-1.567 3.5-3.5S13.933 3 12 3z" />
+export const ImageIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className || "w-6 h-6"}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
     </svg>
 );
 
@@ -169,3 +180,34 @@ export const HourglassIcon = ({ className }: { className?: string }) => (
         <path d="M6 2v6h.01L6 8.01 10 12l-4 4 .01.01H6V22h12v-5.99h-.01L18 16l-4-4 4-3.99-.01-.01H18V2H6zm10 14.5V20H8v-3.5l4-4 4 4zm-4-5l-4-4V4h8v3.5l-4 4z"/>
     </svg>
 );
+
+export const ArrowDownOnSquareIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className || "w-6 h-6"}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+    </svg>
+);
+
+export const GreenDollarIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className || "h-10 w-10"} viewBox="0 0 20 20" >
+        <circle cx="10" cy="10" r="10" fill="var(--success)" />
+        <text
+            x="50%"
+            y="52%"
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fontSize="12"
+            fontWeight="bold"
+            fill="var(--success-text)"
+        >
+            $
+        </text>
+    </svg>
+);
+
+export const EMOJI_LIST: string[] = [
+  '💡', '🛏️', '🧹', '🧺', '🍽️', '🗑️', '🐶', '🐱', '🌱', '📚', 
+  '✏️', '👕', '🧦', '👟', '🍎', '🥦', '🥛', '🪥', '🚲', '⚽', 
+  '🏀', '🎮', '🎨', '🎻', '🎹', '💻', '📱', '🎒', '🚗', '🪴',
+  '🧑‍🍳', '🧼', '✨', '💪', '👍', '💯', '✅', '⭐', '🏆', '🎉',
+  '🤖', '😂', '😎', '😇', '🥳', '🤯', '🤔', '🙏', '💖', '🚀'
+];

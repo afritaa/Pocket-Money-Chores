@@ -1,23 +1,40 @@
 
+
 import React, { useMemo, useEffect } from 'react';
-import useSound from '../hooks/useSound';
-import { CASH_OUT_SOUND } from '../sounds';
+import { useSound } from '../hooks/useSound';
 
 interface CashOutConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
   amount: number;
-  areSoundsEnabled: boolean;
 }
 
-const CashOutConfirmationModal: React.FC<CashOutConfirmationModalProps> = ({ isOpen, onClose, amount, areSoundsEnabled }) => {
-  const playCashOutSound = useSound(CASH_OUT_SOUND, areSoundsEnabled);
+const CashOutConfirmationModal: React.FC<CashOutConfirmationModalProps> = ({ isOpen, onClose, amount }) => {
+  const { playCashOut, playButtonClick } = useSound();
 
+  const handleClose = () => {
+    playButtonClick();
+    onClose();
+  }
+
+  // Close on Enter key press
   useEffect(() => {
-    if (isOpen) {
-      playCashOutSound();
-    }
-  }, [isOpen, playCashOutSound]);
+      const handleKeyDown = (event: KeyboardEvent) => {
+          if (event.key === 'Enter') {
+              event.preventDefault();
+              handleClose();
+          }
+      };
+
+      if (isOpen) {
+          playCashOut();
+          document.addEventListener('keydown', handleKeyDown);
+      }
+
+      return () => {
+          document.removeEventListener('keydown', handleKeyDown);
+      };
+  }, [isOpen, onClose]);
 
   const confettiPieces = useMemo(() => {
     if (!isOpen) return [];
@@ -40,7 +57,7 @@ const CashOutConfirmationModal: React.FC<CashOutConfirmationModalProps> = ({ isO
   return (
     <div
       className="fixed inset-0 bg-[var(--bg-backdrop)] backdrop-blur-sm flex justify-center items-center z-50 transition-opacity overflow-hidden"
-      onClick={onClose}
+      onClick={handleClose}
     >
       {/* Confetti particles container */}
       <div className="absolute inset-0 pointer-events-none">
@@ -67,7 +84,7 @@ const CashOutConfirmationModal: React.FC<CashOutConfirmationModalProps> = ({ isO
             Your earnings are now waiting for approval.
         </p>
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="w-full px-6 py-3 rounded-lg text-[var(--success-text)] bg-[var(--success)] hover:opacity-80 font-semibold transform hover:-translate-y-px transition-all"
         >
           Okay

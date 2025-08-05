@@ -1,7 +1,5 @@
 
-
-
-import React from 'react';
+import React, { useEffect } from 'react';
 
 interface ThemeModalProps {
   isOpen: boolean;
@@ -23,6 +21,24 @@ const themes = [
 ];
 
 const ThemeModal: React.FC<ThemeModalProps> = ({ isOpen, onClose, onSave, currentTheme, isFirstTime }) => {
+  // Close on Enter key press
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            onClose();
+        }
+    };
+
+    if (isOpen) {
+        document.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleSelectTheme = (themeId: string) => {

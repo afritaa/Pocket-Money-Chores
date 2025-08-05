@@ -1,26 +1,25 @@
 
+
 import React, { useState } from 'react';
 import { Chore, Day, PastChoreApproval } from '../types';
-import { CheckIcon, PencilIcon, ExclamationIcon, CoinIcon, StarIcon } from '../constants';
+import { CheckIcon, PencilIcon, ExclamationIcon, CoinIcon, StarIcon, HourglassIcon } from '../constants';
 import DayButton from './DayButton';
-import useSound from '../hooks/useSound';
-import { CHORE_COMPLETE_SOUND } from '../sounds';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import SparkleEffect from './SparkleEffect';
+import { useSound } from '../hooks/useSound';
 
 interface ChoreCardProps {
   chore: Chore;
   currentWeekDays: Date[];
   onToggleCompletion: (choreId: string, date: Date) => void;
   onEditChore?: (chore: Chore) => void;
-  onReorderChores?: (draggedChoreId: string, targetChoreId: string) => void;
   viewMode: 'weekly' | 'daily';
   selectedDate: Date;
   isKidsMode: boolean;
   pastChoreApprovals: PastChoreApproval[];
   onApprovePastChore?: (approvalId: string) => void;
-  draggingChoreId: string | null;
-  dragOverChoreId: string | null;
-  onDragStartTouch?: (e: React.TouchEvent, choreId: string) => void;
-  areSoundsEnabled: boolean;
+  isNewlyAdded?: boolean;
 }
 
 const formatDate = (date: Date): string => {
@@ -35,18 +34,27 @@ const getDayFromDate = (date: Date): Day => {
   return days[dayIndex];
 };
 
+const IconDisplay = ({ icon, name }: { icon: string | null; name: string }) => {
+  if (!icon) {
+    return <StarIcon className="w-6 h-6 sm:w-8 sm:h-8 text-[var(--accent-primary)] opacity-40" />;
+  }
+  if (icon.startsWith('data:image/') || icon.startsWith('/images/')) {
+    return <img src={icon} alt={name} className="w-full h-full object-cover rounded-xl" />;
+  }
+  // Assume emoji if it's not a data URI or a path
+  return <span className="text-3xl">{icon}</span>;
+};
+
 const ChoreCard: React.FC<ChoreCardProps> = ({ 
-  chore, currentWeekDays, onToggleCompletion, onEditChore, onReorderChores, viewMode, selectedDate, isKidsMode, pastChoreApprovals, onApprovePastChore, draggingChoreId, dragOverChoreId, onDragStartTouch, areSoundsEnabled
+  chore, currentWeekDays, onToggleCompletion, onEditChore, viewMode, selectedDate, isKidsMode, pastChoreApprovals, onApprovePastChore, isNewlyAdded
 }) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   const [isCelebrating, setIsCelebrating] = useState(false);
-  const [isMouseDragOver, setIsMouseDragOver] = useState(false);
-  const [dragOverDirection, setDragOverDirection] = useState<'up' | 'down' | null>(null);
+  const { playCompleteChore } = useSound();
 
-  const playCompleteSound = useSound(CHORE_COMPLETE_SOUND, areSoundsEnabled);
-
+  
   const isBonus = chore.type === 'bonus';
   const selectedDateString = formatDate(selectedDate);
   const completionState = chore.completions[selectedDateString];
@@ -55,6 +63,7 @@ const ChoreCard: React.FC<ChoreCardProps> = ({
   const isPendingCashOutOnSelectedDate = completionState === 'pending_cash_out';
   const pendingApproval = pastChoreApprovals.find(a => a.choreId === chore.id && a.date === selectedDateString);
   const isPendingOnSelectedDate = !!pendingApproval;
+  const isPendingAcceptance = chore.type === 'bonus' && Object.values(chore.completions).includes('pending_acceptance');
 
   const handleCompleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -66,41 +75,32 @@ const ChoreCard: React.FC<ChoreCardProps> = ({
     if (isBonus) return;
 
     if (!isCompletedOnSelectedDate) {
-        playCompleteSound();
         setIsCelebrating(true);
+        playCompleteChore();
         setTimeout(() => setIsCelebrating(false), 800);
     }
     onToggleCompletion(chore.id, selectedDate);
   };
 
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
-    e.dataTransfer.setData('choreId', chore.id);
-    e.dataTransfer.effectAllowed = 'move';
-  };
+  const isDraggable = !isKidsMode && !isBonus;
   
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    if (draggingChoreId && draggingChoreId !== chore.id) {
-        setIsMouseDragOver(true);
-        const rect = e.currentTarget.getBoundingClientRect();
-        const y = e.clientY - rect.top;
-        setDragOverDirection(y > rect.height / 2 ? 'down' : 'up');
-    }
-  };
-  
-  const handleDragLeave = () => {
-    setIsMouseDragOver(false);
-    setDragOverDirection(null);
-  };
-  
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsMouseDragOver(false);
-    setDragOverDirection(null);
-    const draggedChoreId = e.dataTransfer.getData('choreId');
-    if (onReorderChores && draggedChoreId && draggedChoreId !== chore.id) {
-      onReorderChores(draggedChoreId, chore.id);
-    }
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: chore.id,
+    disabled: !isDraggable,
+  });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 100 : 'auto',
+    opacity: isDragging ? 0.95 : 1,
   };
 
   const CompletionButton = () => (
@@ -121,62 +121,47 @@ const ChoreCard: React.FC<ChoreCardProps> = ({
     </button>
   );
 
-  const isDraggable = !isKidsMode && !!onReorderChores && !!onDragStartTouch && !isBonus;
-  const isDragging = chore.id === draggingChoreId;
-  const isDragOver = isMouseDragOver || (chore.id === dragOverChoreId && dragOverChoreId !== draggingChoreId);
-  const slideDirection = dragOverDirection || 'up'; // Default to sliding up for touch where direction isn't tracked
-
   const ChoreIconButton = (
-    <button
-      onClick={() => onEditChore?.(chore)}
-      disabled={isKidsMode || !onEditChore}
-      className="relative w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center bg-[var(--bg-tertiary)] rounded-xl transition-all duration-200 disabled:cursor-default"
-      aria-label={isKidsMode ? `Chore icon` : `Edit chore icon for ${chore.name}`}
-    >
+    <div className="relative w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0">
       {!isKidsMode && onEditChore ? (
-        <>
-          {/* Base Layer: Pencil Icon */}
-          <PencilIcon className="absolute inset-0 m-auto w-6 h-6 sm:w-7 sm:h-7 text-[var(--text-secondary)]" />
-          
-          {/* Top Layer: Chore Image/Emoji with opacity */}
-          <div className="w-full h-full flex items-center justify-center opacity-50">
-            {chore.icon ? (
-              chore.icon.startsWith('data:image/') ? (
-                <img src={chore.icon} alt="" className="w-full h-full object-cover rounded-xl" />
-              ) : (
-                <span className="text-3xl">{chore.icon}</span>
-              )
-            ) : null}
+        <button 
+          onClick={(e) => { e.stopPropagation(); onEditChore(chore); }}
+          className="group w-full h-full flex items-center justify-center bg-[var(--bg-tertiary)] rounded-xl transition-all duration-200 hover:bg-[var(--border-primary)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--bg-secondary)] focus:ring-[var(--accent-primary)]"
+          aria-label={`Edit chore ${chore.name}`}
+        >
+          <div className="flex items-center justify-center w-full h-full overflow-hidden rounded-xl">
+            <IconDisplay icon={chore.icon} name={chore.name} />
           </div>
-        </>
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+            <PencilIcon className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+          </div>
+        </button>
       ) : (
-        /* Original Kids Mode / No Edit view */
-        <div className="flex items-center justify-center w-full h-full">
-          {chore.icon ? (
-            chore.icon.startsWith('data:image/') ? (
-              <img src={chore.icon} alt={chore.name} className="w-full h-full object-cover rounded-xl" />
-            ) : (
-              <span className="text-3xl">{chore.icon}</span>
-            )
-          ) : (
-            <StarIcon className="w-6 h-6 sm:w-8 sm:h-8 text-[var(--accent-primary)] opacity-40" />
-          )}
+        <div className="flex items-center justify-center w-full h-full bg-[var(--bg-tertiary)] rounded-xl overflow-hidden">
+          <IconDisplay icon={chore.icon} name={chore.name} />
         </div>
       )}
-    </button>
+    </div>
   );
 
-  const cardContent = (
-    <div
-      className={`relative transition-transform duration-300 ease-in-out ${isDragOver ? (slideDirection === 'down' ? 'translate-y-full' : '-translate-y-full') : ''}`}
-      draggable={isDraggable}
-      onDragStart={isDraggable ? handleDragStart : undefined}
-      onTouchStart={isDraggable ? (e) => onDragStartTouch?.(e, chore.id) : undefined}
-      style={{ cursor: isDraggable ? 'grab' : 'default' }}
-    >
-      {isBonus ? (
-          // Bonus Card Layout
-          <div className="bg-[var(--warning-bg-subtle)] border-[var(--warning-border)] rounded-2xl p-2 sm:p-3 flex items-center justify-between gap-2 sm:gap-3">
+  const cardInnerContent = (
+      isPendingAcceptance && !isKidsMode ? (
+        <div className="bg-[var(--bg-tertiary)] opacity-80 p-2 sm:p-3 flex items-center justify-between gap-2 sm:gap-3 border-2 border-dashed border-[var(--border-secondary)]">
+          <div className="flex items-center gap-3 flex-grow min-w-0">
+            <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center bg-slate-400/20 rounded-xl">
+              <HourglassIcon className="w-7 h-7 sm:w-8 sm:h-8 text-slate-500" />
+            </div>
+            <div className="flex flex-col justify-center min-w-0">
+              <h3 className="text-base sm:text-lg font-semibold text-[var(--text-secondary)] truncate">Pending Bonus</h3>
+              <p className="text-sm sm:text-base font-bold text-[var(--text-secondary)]">${(chore.value / 100).toFixed(2)}</p>
+            </div>
+          </div>
+          <div className="flex-shrink-0 flex items-center bg-[var(--bg-secondary)] px-2 py-1 sm:px-3 sm:py-2 rounded-lg border border-[var(--border-primary)]">
+            <p className="text-[11px] sm:text-xs font-semibold text-[var(--text-secondary)] tracking-wide">Pending</p>
+          </div>
+        </div>
+      ) : isBonus ? (
+          <div className="bg-[var(--warning-bg-subtle)] border-[var(--warning-border)] p-2 sm:p-3 flex items-center justify-between gap-2 sm:gap-3">
             <div className="flex items-center gap-3">
               <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center bg-yellow-400/20 rounded-xl">
                 <StarIcon className="w-7 h-7 sm:w-8 sm:h-8 text-[var(--warning)]" />
@@ -196,8 +181,7 @@ const ChoreCard: React.FC<ChoreCardProps> = ({
             </div>
           </div>
       ) : viewMode === 'weekly' ? (
-        // Weekly View Layout
-        <div className="bg-[var(--bg-secondary)] p-2 sm:p-3 flex flex-col gap-3">
+        <div className="p-2 sm:p-3 flex flex-col gap-3">
           <div className="flex items-center justify-between gap-2 sm:gap-3">
               <div className="flex-grow flex items-center gap-2 sm:gap-3 min-w-0">
                   {ChoreIconButton}
@@ -207,37 +191,20 @@ const ChoreCard: React.FC<ChoreCardProps> = ({
                   <p className="text-xl sm:text-2xl font-bold text-[var(--success)]">${(chore.value / 100).toFixed(2)}</p>
               </div>
           </div>
-          <div className="flex justify-between gap-0.5 sm:gap-1">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2">
               {currentWeekDays.map(date => {
-              const dateString = formatDate(date);
-              const dayOfWeek = getDayFromDate(date);
-              return (
-                  <DayButton 
-                    key={date.getTime()} 
-                    day={dayOfWeek} 
-                    isAssigned={chore.days.includes(dayOfWeek)} 
-                    isCompleted={chore.completions[dateString] === 'completed'} 
-                    isCashedOut={chore.completions[dateString] === 'cashed_out'}
-                    isPendingCashOut={chore.completions[dateString] === 'pending_cash_out'}
-                    isToday={formatDate(date) === formatDate(new Date())}
-                    isPast={date.getTime() < today.getTime()} 
-                    isKidsMode={isKidsMode} 
-                    isPendingApproval={pastChoreApprovals.some(a => a.choreId === chore.id && a.date === dateString)}
-                    isBonus={false}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        if (chore.days.includes(dayOfWeek)) {
-                          onToggleCompletion(chore.id, date);
-                        }
-                    }}
-                  />
-              );
+                const dateString = formatDate(date);
+                const dayOfWeek = getDayFromDate(date);
+                return (
+                  <div key={date.getTime()} className="flex justify-center">
+                    <DayButton day={dayOfWeek} isAssigned={chore.days.includes(dayOfWeek)} isCompleted={chore.completions[dateString] === 'completed'} isCashedOut={chore.completions[dateString] === 'cashed_out'} isPendingCashOut={chore.completions[dateString] === 'pending_cash_out'} isPendingAcceptance={chore.completions[dateString] === 'pending_acceptance'} isToday={formatDate(date) === formatDate(new Date())} isPast={date.getTime() < today.getTime()} isKidsMode={isKidsMode} isPendingApproval={pastChoreApprovals.some(a => a.choreId === chore.id && a.date === dateString)} isBonus={false} onClick={(e) => { e.stopPropagation(); if (chore.days.includes(dayOfWeek)) { onToggleCompletion(chore.id, date); } }} />
+                  </div>
+                );
               })}
           </div>
         </div>
       ) : (
-        // Daily View Layout
-        <div className="bg-[var(--bg-secondary)] p-2 sm:p-3 flex items-center justify-between gap-2 sm:gap-3">
+        <div className="p-2 sm:p-3 flex items-center justify-between gap-2 sm:gap-3">
           <div className="flex-grow flex items-center gap-2 sm:gap-3 min-w-0">
             {ChoreIconButton}
             <h3 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)] truncate">{chore.name}</h3>
@@ -254,29 +221,25 @@ const ChoreCard: React.FC<ChoreCardProps> = ({
                 </>
               )
             ) : (
-              <>
-                <CompletionButton />
-              </>
+              <CompletionButton />
             )}
           </div>
         </div>
-      )}
-    </div>
+      )
   );
 
   return (
     <div
+      ref={setNodeRef}
+      style={style}
       id={`chore-${chore.id}`}
-      className={`relative bg-transparent rounded-2xl transition-all duration-300 
-        ${isDragging ? 'opacity-50 z-0' : 'z-10'}
-        ${isBonus ? 'pointer-events-none' : ''}`}
-      onDragOver={isDraggable ? handleDragOver : undefined}
-      onDragLeave={isDraggable ? handleDragLeave : undefined}
-      onDrop={isDraggable ? handleDrop : undefined}
-      data-chore-id={chore.id}
+      className={`${isDraggable ? 'cursor-grab' : ''} mb-3`}
+      {...(isDraggable ? attributes : {})}
+      {...(isDraggable ? listeners : {})}
     >
-      <div className={`bg-[var(--bg-secondary)] rounded-2xl ${isDragging ? 'shadow-2xl' : ''}`}>
-        {cardContent}
+      <div className={`relative bg-[var(--bg-secondary)] rounded-xl overflow-hidden transition-all duration-200 ${isDragging ? 'ring-2 ring-offset-2 ring-[var(--accent-primary)] ring-offset-[var(--bg-primary)]' : ''}`}>
+        {isNewlyAdded && <SparkleEffect />}
+        {cardInnerContent}
       </div>
 
        <style>

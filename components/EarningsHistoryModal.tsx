@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { EarningsRecord, GraphDataPoint } from '../types';
 import LineGraph from './LineGraph';
 import { StarIcon } from '../constants';
@@ -24,6 +24,29 @@ const EarningsHistoryModal: React.FC<EarningsHistoryModalProps> = ({ isOpen, onC
     const [graphPeriod, setGraphPeriod] = useState<GraphPeriod>('Month');
     const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
     const [editValue, setEditValue] = useState<string>('');
+
+    // Close on Enter key press
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                if (editingRecordId) {
+                    handleSaveEdit();
+                } else {
+                    onClose();
+                }
+            }
+        };
+
+        if (isOpen) {
+            document.addEventListener('keydown', handleKeyDown);
+        }
+
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isOpen, onClose, editingRecordId, editValue]);
+
 
     // Memoized calculation for the "Totals" tab
     const totals = useMemo(() => {

@@ -1,30 +1,47 @@
 
+
 import React, { useEffect } from 'react';
-import useSound from '../hooks/useSound';
-import { ALL_CHORES_DONE_SOUND } from '../sounds';
+import { useSound } from '../hooks/useSound';
 
 interface AllChoresDoneModalProps {
   isOpen: boolean;
   onClose: () => void;
   dailyAmount: number;
-  areSoundsEnabled: boolean;
 }
 
-const AllChoresDoneModal: React.FC<AllChoresDoneModalProps> = ({ isOpen, onClose, dailyAmount, areSoundsEnabled }) => {
-  const playAllDoneSound = useSound(ALL_CHORES_DONE_SOUND, areSoundsEnabled);
+const AllChoresDoneModal: React.FC<AllChoresDoneModalProps> = ({ isOpen, onClose, dailyAmount }) => {
+  const { playAllDone, playButtonClick } = useSound();
 
-  useEffect(() => {
-    if (isOpen) {
-      playAllDoneSound();
-    }
-  }, [isOpen, playAllDoneSound]);
+  const handleClose = () => {
+    playButtonClick();
+    onClose();
+  };
   
+  // Close on Enter key press
+  useEffect(() => {
+      const handleKeyDown = (event: KeyboardEvent) => {
+          if (event.key === 'Enter') {
+              event.preventDefault();
+              handleClose();
+          }
+      };
+
+      if (isOpen) {
+          playAllDone();
+          document.addEventListener('keydown', handleKeyDown);
+      }
+
+      return () => {
+          document.removeEventListener('keydown', handleKeyDown);
+      };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
     <div
       className="fixed inset-0 bg-[var(--bg-backdrop)] backdrop-blur-sm flex justify-center items-center z-50 transition-opacity"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         className="relative bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl shadow-2xl p-8 m-4 w-full max-w-md text-center transform transition-all text-[var(--text-primary)] overflow-hidden"
@@ -48,7 +65,7 @@ const AllChoresDoneModal: React.FC<AllChoresDoneModalProps> = ({ isOpen, onClose
           You’ve finished all of today’s chores! You have earned <span className="font-bold text-[var(--success)]">${(dailyAmount / 100).toFixed(2)}</span> today.
         </p>
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="w-full px-6 py-3 rounded-lg text-[var(--accent-primary-text)] bg-[var(--accent-primary)] hover:bg-[var(--accent-secondary)] font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-px transition-all"
         >
           Great!

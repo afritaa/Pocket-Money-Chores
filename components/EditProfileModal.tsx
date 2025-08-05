@@ -1,6 +1,6 @@
 
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Profile, Day, PayDayConfig } from '../types';
 import { DAYS_OF_WEEK, UserCircleIcon, TrashIcon } from '../constants';
 
@@ -40,15 +40,15 @@ const PayDaySettingsEditor = ({ config, onConfigChange, profileName }: { config:
                         <button type="button" onClick={() => onConfigChange({ ...config, mode: 'manual' })} className={`w-1/2 py-1.5 text-sm font-semibold rounded-full transition-all ${mode === 'manual' ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)]' : 'text-[var(--text-secondary)]'}`}>Manual</button>
                         <button type="button" onClick={() => onConfigChange({ ...config, mode: 'automatic', time: config.time || '18:00' })} className={`w-1/2 py-1.5 text-sm font-semibold rounded-full transition-all ${mode === 'automatic' ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)]' : 'text-[var(--text-secondary)]'}`}>Automatic</button>
                     </div>
-                    {mode === 'manual' && <p className="text-xs text-[var(--text-secondary)] text-center">{profileName} can only see the Cash Out button and request payment on this selected day.</p>}
-                    {mode === 'automatic' && <p className="text-xs text-[var(--text-secondary)] text-center">Have a regular pay day already? No worries! Set it below and a request will be automatically sent each week telling you how much {profileName} has earned!</p>}
+                    {mode === 'manual' && <p className="text-xs text-[var(--text-secondary)] text-center">{profileName} will only see the Cash Out button on this day.</p>}
+                    {mode === 'automatic' && <p className="text-xs text-[var(--text-secondary)] text-center">An automatic request for {profileName} to Cash Out will be sent at this time each week.</p>}
                     
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-[var(--text-secondary)]">Pay Day of the Week</label>
-                        <div className="grid grid-cols-4 md:grid-cols-7 gap-2">
+                        <div className="grid grid-cols-7 gap-1">
                             {DAYS_OF_WEEK.map(d => (
-                                <button key={d} type="button" onClick={() => onConfigChange({ ...config, day: d })} className={`py-2 rounded-lg font-bold text-sm transition-all ${day === d ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)]' : 'bg-[var(--bg-secondary)] hover:opacity-80 border border-[var(--border-primary)]'}`}>
-                                    {d.slice(0, 3)}
+                                <button key={d} type="button" onClick={() => onConfigChange({ ...config, day: d })} className={`w-10 h-10 flex items-center justify-center rounded-full font-bold text-sm transition-all ${day === d ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)]' : 'bg-[var(--bg-secondary)] hover:opacity-80 border border-[var(--border-primary)]'}`}>
+                                    {d.slice(0, 1)}
                                 </button>
                             ))}
                         </div>
@@ -74,6 +74,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, on
   const [showPotentialEarnings, setShowPotentialEarnings] = useState(true);
   const [error, setError] = useState('');
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const resetForm = useCallback(() => {
     setName(initialData?.name || '');
@@ -101,14 +102,51 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, on
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = useCallback((e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!name.trim()) {
       setError("Child's name is required.");
       return;
     }
     onSave({ ...initialData, name: name.trim(), image, payDayConfig, showPotentialEarnings });
-  };
+  }, [name, image, payDayConfig, showPotentialEarnings, onSave, initialData]);
+
+  const handleEnterKey = useCallback((event: KeyboardEvent) => {
+    if (event.key === 'Enter') {
+        const form = formRef.current;
+        if (!form || isConfirmingDelete) return;
+
+        const activeElement = document.activeElement as HTMLElement;
+        if (activeElement.tagName === 'BUTTON' && activeElement.getAttribute('type') !== 'submit') {
+            event.preventDefault();
+            activeElement.click();
+            return;
+        }
+
+        event.preventDefault();
+
+        const focusable = Array.from(
+            form.querySelectorAll('input, button, textarea, select')
+        ).filter(el => !(el as HTMLElement).hasAttribute('disabled') && (el as HTMLElement).offsetParent !== null) as HTMLElement[];
+
+        const currentIndex = focusable.indexOf(activeElement);
+
+        if (currentIndex > -1 && currentIndex < focusable.length - 1) {
+            focusable[currentIndex + 1].focus();
+        } else {
+            handleSubmit();
+        }
+    }
+  }, [isConfirmingDelete, handleSubmit]);
+
+  useEffect(() => {
+    if (isOpen) {
+        document.addEventListener('keydown', handleEnterKey);
+    }
+    return () => {
+        document.removeEventListener('keydown', handleEnterKey);
+    };
+  }, [isOpen, handleEnterKey]);
 
   if (!isOpen) return null;
 
@@ -119,7 +157,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, on
           <h2 className="text-2xl font-bold">Edit {initialData.name}'s Profile</h2>
         </div>
         {error && <p className="bg-[var(--danger-bg-subtle)] text-[var(--danger)] p-3 rounded-lg mb-4 border border-[var(--danger-border)]">{error}</p>}
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
           <div className="flex flex-col items-center space-y-4">
             {image ? <img src={image} alt="Profile" className="h-24 w-24 rounded-full object-cover border-2 border-[var(--border-secondary)]" /> : <UserCircleIcon className="h-24 w-24 text-[var(--text-tertiary)]" />}
             <label htmlFor="profile-image-upload" className="cursor-pointer px-4 py-2 rounded-lg text-sm text-[var(--text-primary)] bg-[var(--bg-tertiary)] hover:opacity-80 font-semibold border border-[var(--border-secondary)] transition-all">Change Picture</label>
