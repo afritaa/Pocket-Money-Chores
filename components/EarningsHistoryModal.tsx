@@ -1,8 +1,14 @@
 
-import React, { useState, useMemo } from 'react';
+
+
+
+
+
+import React, { useState, useMemo, useEffect } from 'react';
 import { EarningsRecord, GraphDataPoint } from '../types';
 import LineGraph from './LineGraph';
-import { StarIcon } from '../constants';
+import { StarIcon, XIcon } from '../constants';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface EarningsHistoryModalProps {
   isOpen: boolean;
@@ -24,6 +30,23 @@ const EarningsHistoryModal: React.FC<EarningsHistoryModalProps> = ({ isOpen, onC
     const [graphPeriod, setGraphPeriod] = useState<GraphPeriod>('Month');
     const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
     const [editValue, setEditValue] = useState<string>('');
+
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (editingRecordId) {
+                if(event.key === 'Enter') {
+                    event.preventDefault();
+                    handleSaveEdit();
+                } else if (event.key === 'Escape') {
+                    event.preventDefault();
+                    setEditingRecordId(null);
+                }
+            }
+        };
+        if (isOpen) document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, editingRecordId, editValue]);
+
 
     // Memoized calculation for the "Totals" tab
     const totals = useMemo(() => {
@@ -93,8 +116,6 @@ const EarningsHistoryModal: React.FC<EarningsHistoryModalProps> = ({ isOpen, onC
         }
     };
 
-    if (!isOpen) return null;
-
     const renderContent = () => {
         switch (activeTab) {
             case 'History':
@@ -103,7 +124,7 @@ const EarningsHistoryModal: React.FC<EarningsHistoryModalProps> = ({ isOpen, onC
                         {history.length === 0 ? (
                             <p className="text-[var(--text-secondary)] text-center py-8">No cash-out history yet.</p>
                         ) : (
-                            <ul className="space-y-3 max-h-[40vh] overflow-y-auto pr-2 -mr-2 custom-scrollbar">
+                            <ul className="space-y-3">
                                 {[...history].reverse().map((record) => (
                                     <li key={record.id} className="flex justify-between items-center bg-[var(--bg-tertiary)] p-3 rounded-lg border border-[var(--border-secondary)]">
                                         <div className="flex-grow pr-4">
@@ -202,50 +223,56 @@ const EarningsHistoryModal: React.FC<EarningsHistoryModalProps> = ({ isOpen, onC
 
 
     return (
-        <div
-            className="fixed inset-0 bg-[var(--bg-backdrop)] backdrop-blur-sm flex justify-center items-center z-50 transition-opacity"
-            onClick={onClose}
-        >
-            <div
-                className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl p-6 sm:p-8 m-4 w-full max-w-2xl transform transition-all text-[var(--text-primary)]"
-                onClick={e => e.stopPropagation()}
+        <AnimatePresence>
+            {isOpen && (
+            <motion.div 
+                className="fixed inset-0 bg-[var(--bg-backdrop)] backdrop-blur-sm z-50 flex justify-center items-start overflow-y-auto"
+                onClick={onClose}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
             >
-                <h2 className="text-2xl font-bold mb-6 text-center">Earnings Analysis</h2>
-
-                <div className="flex justify-center border-b border-[var(--border-primary)] mb-6">
-                    {(['History', 'Totals', 'Graph'] as Tab[]).map(tab => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`px-4 py-2 text-sm font-semibold transition-colors duration-200 border-b-2 ${activeTab === tab ? 'border-[var(--accent-primary)] text-[var(--accent-primary)]' : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
-                        >
-                            {tab}
+                <style>{`
+                    .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+                    .custom-scrollbar::-webkit-scrollbar-track { background: rgba(128, 128, 128, 0.1); border-radius: 10px; }
+                    .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(128, 128, 128, 0.2); border-radius: 10px; }
+                    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(128, 128, 128, 0.4); }
+                    @keyframes fade-in-fast { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+                    .animate-fade-in-fast { animation: fade-in-fast 0.3s ease-out forwards; }
+                `}</style>
+                <motion.div
+                    className="bg-[var(--card-bg)] rounded-b-3xl sm:rounded-3xl shadow-xl w-full max-w-2xl flex flex-col h-full sm:h-auto sm:max-h-[calc(100vh-4rem)] sm:my-8"
+                    onClick={e => e.stopPropagation()}
+                    initial={{ y: '-100vh', opacity: 0 }}
+                    animate={{ y: 0, opacity: 1, transition: { type: 'spring', stiffness: 300, damping: 30, delay: 0.1 } }}
+                    exit={{ y: '-100vh', opacity: 0, transition: { duration: 0.2 } }}
+                >
+                    <div className="flex-shrink-0 flex items-center justify-between p-4 h-20">
+                        <button type="button" onClick={onClose} className="p-2 -m-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
+                            <XIcon className="h-7 w-7" />
                         </button>
-                    ))}
-                </div>
+                        <h2 className="text-2xl font-bold">Earnings Analysis</h2>
+                        <div className="w-10"></div>
+                    </div>
 
-                <div className="min-h-[250px]">
-                    {renderContent()}
-                </div>
-
-                <div className="flex justify-end mt-8">
-                    <button
-                        onClick={onClose}
-                        className="px-6 py-2 rounded-lg text-[var(--accent-primary-text)] bg-[var(--accent-primary)] hover:bg-[var(--accent-secondary)] font-semibold transform hover:-translate-y-px transition-all"
-                    >
-                        Close
-                    </button>
-                </div>
-            </div>
-             <style>{`
-                .custom-scrollbar::-webkit-scrollbar { width: 8px; }
-                .custom-scrollbar::-webkit-scrollbar-track { background: rgba(128, 128, 128, 0.1); border-radius: 10px; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(128, 128, 128, 0.2); border-radius: 10px; }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(128, 128, 128, 0.4); }
-                @keyframes fade-in-fast { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-                .animate-fade-in-fast { animation: fade-in-fast 0.3s ease-out forwards; }
-            `}</style>
-        </div>
+                    <div className="flex-grow overflow-y-auto custom-scrollbar p-4">
+                        <div className="flex justify-center border-b border-[var(--border-primary)] mb-6">
+                            {(['History', 'Totals', 'Graph'] as Tab[]).map(tab => (
+                                <button
+                                    key={tab}
+                                    onClick={() => setActiveTab(tab)}
+                                    className={`px-4 py-2 text-sm font-semibold transition-colors duration-200 border-b-2 ${activeTab === tab ? 'border-[var(--accent-primary)] text-[var(--accent-primary)]' : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
+                                >
+                                    {tab}
+                                </button>
+                            ))}
+                        </div>
+                        {renderContent()}
+                    </div>
+                </motion.div>
+            </motion.div>
+            )}
+        </AnimatePresence>
     );
 };
 

@@ -1,26 +1,25 @@
 
+
 import React from 'react';
-import { PlusIcon, StarIcon } from '../constants';
-import useSound from '../hooks/useSound';
-import { BUTTON_CLICK_SOUND } from '../sounds';
+import { PlusIcon, StarOutlineIcon } from '../constants';
+import { useSound } from '../hooks/useSound';
 
 interface ActionBarProps {
   onAddChore: () => void;
   onPayBonus: () => void;
   pulseAddChore: boolean;
-  areSoundsEnabled: boolean;
 }
 
-const ActionBar: React.FC<ActionBarProps> = ({ onAddChore, onPayBonus, pulseAddChore, areSoundsEnabled }) => {
-  const playClickSound = useSound(BUTTON_CLICK_SOUND, areSoundsEnabled);
+const ActionBar: React.FC<ActionBarProps> = ({ onAddChore, onPayBonus, pulseAddChore }) => {
+  const { playButtonClick } = useSound();
 
   const handleAddChore = () => {
-    playClickSound();
+    playButtonClick();
     onAddChore();
   };
 
   const handlePayBonus = () => {
-    playClickSound();
+    playButtonClick();
     onPayBonus();
   };
 
@@ -37,9 +36,9 @@ const ActionBar: React.FC<ActionBarProps> = ({ onAddChore, onPayBonus, pulseAddC
           </button>
           <button
             onClick={handlePayBonus}
-            className="flex-1 flex items-center justify-center gap-2 text-white font-bold py-3 px-5 rounded-lg transform hover:-translate-y-px transition-all animate-pulse-bonus"
+            className="flex-1 flex items-center justify-center gap-2 text-white font-bold py-3 px-5 rounded-lg transform hover:-translate-y-px transition-all animate-pulse-bonus text-shadow-sm"
           >
-            <StarIcon className="h-6 w-6" />
+            <StarOutlineIcon className="h-6 w-6" />
             <span>Pay Bonus</span>
           </button>
         </div>
@@ -53,7 +52,7 @@ const ActionBar: React.FC<ActionBarProps> = ({ onAddChore, onPayBonus, pulseAddC
             top: -1.5rem; /* Start the effect 1.5rem (24px) above the bar */
             z-index: -1;
             /* A subtle background tint from the theme's primary color for better visual separation and a glassmorphism effect. */
-            background: rgba(var(--bg-primary-values-rgb, 241, 245, 249), 0.65);
+            background: rgba(var(--bg-primary-values-rgb, 241, 245, 249), 0.6);
             /* The blur effect for the area behind the bar. */
             -webkit-backdrop-filter: blur(12px);
             backdrop-filter: blur(12px);

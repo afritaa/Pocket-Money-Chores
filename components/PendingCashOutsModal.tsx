@@ -1,6 +1,13 @@
 
-import React from 'react';
+
+
+
+
+
+import React, { useEffect } from 'react';
 import { EarningsRecord } from '../types';
+import { XIcon } from '../constants';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface PendingCashOutsModalProps {
   isOpen: boolean;
@@ -15,56 +22,70 @@ const PendingCashOutsModal: React.FC<PendingCashOutsModalProps> = ({
   pendingCashOuts,
   onOpenReview,
 }) => {
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="fixed inset-0 bg-[var(--bg-backdrop)] backdrop-blur-sm flex justify-center items-center z-50 transition-opacity"
-      onClick={onClose}
-    >
-      <div
-        className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl p-8 m-4 w-full max-w-lg transform transition-all text-[var(--text-primary)]"
-        onClick={e => e.stopPropagation()}
+    <AnimatePresence>
+      {isOpen && (
+      <motion.div 
+        className="fixed inset-0 bg-[var(--bg-backdrop)] backdrop-blur-sm z-50 flex items-start justify-center overflow-y-auto"
+        onClick={onClose}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
       >
-        <h2 className="text-2xl font-bold mb-6">Pending Cash Outs</h2>
-
-        {pendingCashOuts.length === 0 ? (
-          <p className="text-[var(--text-secondary)] text-center py-8">No pending cash outs to approve.</p>
-        ) : (
-          <div className="space-y-4">
-            <ul className="space-y-3 max-h-80 overflow-y-auto pr-2 -mr-2">
-              {pendingCashOuts.map(record => (
-                <li key={record.id} className="flex justify-between items-center bg-[var(--bg-tertiary)] p-4 rounded-lg border border-[var(--border-secondary)]">
-                  <div>
-                    <span className="font-medium text-[var(--text-secondary)]">
-                      {new Date(record.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })}
-                    </span>
-                    <span className="font-bold text-lg text-[var(--success)] ml-4">
-                      ${(record.amount / 100).toFixed(2)}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => onOpenReview(record)}
-                    className="px-4 py-1 rounded-lg text-sm text-[var(--success-text)] bg-[var(--success)] hover:opacity-80 font-semibold transition-all"
-                  >
-                    Review & Approve
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        <div className="flex justify-end mt-8">
-          <button
-            onClick={onClose}
-            className="px-6 py-2 rounded-lg text-[var(--text-primary)] bg-[var(--bg-tertiary)] hover:opacity-80 border border-[var(--border-secondary)] font-semibold transition-colors"
+          <style>{`
+              .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+              .custom-scrollbar::-webkit-scrollbar-track { background: rgba(128, 128, 128, 0.1); border-radius: 10px; }
+              .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(128, 128, 128, 0.2); border-radius: 10px; }
+          `}</style>
+          <motion.div
+              className="bg-[var(--card-bg)] rounded-b-3xl sm:rounded-3xl shadow-xl w-full max-w-lg flex flex-col h-full sm:h-auto sm:max-h-[calc(100vh-4rem)] sm:my-8"
+              onClick={e => e.stopPropagation()}
+              initial={{ y: '-100vh', opacity: 0 }}
+              animate={{ y: 0, opacity: 1, transition: { type: 'spring', stiffness: 300, damping: 30, delay: 0.1 } }}
+              exit={{ y: '-100vh', opacity: 0, transition: { duration: 0.2 } }}
           >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
+              <div className="flex-shrink-0 flex items-center justify-between p-4 h-20">
+                  <button type="button" onClick={onClose} className="p-2 -m-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
+                      <XIcon className="h-7 w-7" />
+                  </button>
+                  <h2 className="text-2xl font-bold">Pending Cash Outs</h2>
+                  <div className="w-10"></div>
+              </div>
+
+              <div className="flex-grow overflow-y-auto custom-scrollbar p-4">
+                  {pendingCashOuts.length === 0 ? (
+                  <div className="flex items-center justify-center h-full">
+                      <p className="text-[var(--text-secondary)] text-center py-8">No pending cash outs to approve.</p>
+                  </div>
+                  ) : (
+                  <div className="space-y-4">
+                      <ul className="space-y-3">
+                      {pendingCashOuts.map(record => (
+                          <li key={record.id} className="flex justify-between items-center bg-[var(--bg-tertiary)] p-4 rounded-lg border border-[var(--border-secondary)]">
+                          <div>
+                              <span className="font-medium text-[var(--text-secondary)]">
+                              {new Date(record.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })}
+                              </span>
+                              <span className="font-bold text-lg text-[var(--success)] ml-4">
+                              ${(record.amount / 100).toFixed(2)}
+                              </span>
+                          </div>
+                          <button
+                              onClick={() => onOpenReview(record)}
+                              className="px-4 py-1 rounded-lg text-sm text-[var(--success-text)] bg-[var(--success)] hover:opacity-80 font-semibold transition-all"
+                          >
+                              Review & Approve
+                          </button>
+                          </li>
+                      ))}
+                      </ul>
+                  </div>
+                  )}
+              </div>
+          </motion.div>
+      </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 

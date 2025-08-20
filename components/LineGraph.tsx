@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useRef } from 'react';
 import { GraphDataPoint } from '../types';
 
@@ -73,127 +74,114 @@ const LineGraph: React.FC<LineGraphProps> = ({ data }) => {
         const d = data[i];
         if (d) ticksX.push({ date: parseLocalDate(d.date), x: xScale(parseLocalDate(d.date)) });
       }
-      if (!ticksX.find(t => t.date.getTime() === parseLocalDate(data[data.length-1].date).getTime())) {
-         ticksX.push({ date: parseLocalDate(data[data.length-1].date), x: xScale(parseLocalDate(data[data.length-1].date)) });
+      if (data.length > 1 && !ticksX.find(t => parseLocalDate(t.date).getTime() === parseLocalDate(data[data.length-1].date).getTime())) {
+          const lastDataPoint = data[data.length - 1];
+          ticksX.push({ date: parseLocalDate(lastDataPoint.date), x: xScale(parseLocalDate(lastDataPoint.date)) });
       }
     }
-
-
     return { xScale, yScale, linePath, areaPath, ticksY, ticksX, maxValue };
   }, [data, innerWidth, innerHeight]);
 
-  const handleMouseMove = (event: React.MouseEvent<SVGRectElement>) => {
-    if (!xScale || !yScale || !svgRef.current) return;
-    const svgRect = svgRef.current.getBoundingClientRect();
-    const svgX = event.clientX - svgRect.left;
-
-    // Find the closest point in the data
-    let closestPoint: GraphDataPoint | null = null;
-    let minDistance = Infinity;
-
-    data.forEach(d => {
-      const pointX = xScale(parseLocalDate(d.date));
-      const distance = Math.abs(svgX - pointX);
-      if (distance < minDistance) {
-        minDistance = distance;
-        closestPoint = d;
-      }
-    });
-    
-    if (closestPoint) {
-      setActivePoint(closestPoint);
-      setTooltipPosition({
-        x: xScale(parseLocalDate(closestPoint.date)),
-        y: yScale(closestPoint.total)
-      });
-    }
-  };
-
-  const handleMouseLeave = () => {
-    setActivePoint(null);
-    setTooltipPosition(null);
-  };
-  
-  const formatDateTick = (date: Date) => {
-    // Show month and day
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
-
-
-  if (!xScale || !yScale) return null;
-
-  return (
-    <div className="relative w-full h-full">
-      <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} className="w-full h-full" style={{ overflow: 'visible' }}>
-        <defs>
-            <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--accent-primary)" stopOpacity="0.4"/>
-                <stop offset="100%" stopColor="var(--accent-primary)" stopOpacity="0"/>
-            </linearGradient>
-        </defs>
-
-        {/* Y-axis */}
-        <g className="text-[10px] text-[var(--text-tertiary)]">
-          {ticksY.map(tick => (
-            <g key={tick.value} transform={`translate(0, ${tick.y})`}>
-              <line x1={margin.left} y1="0" x2={width - margin.right} y2="0" stroke="var(--border-primary)" strokeWidth="0.5" strokeDasharray="2,2"/>
-              <text x={margin.left - 8} dy="0.32em" textAnchor="end" fill="currentColor">
-                ${Math.round(tick.value / 100)}
-              </text>
-            </g>
-          ))}
-        </g>
-
-        {/* X-axis */}
-        <g className="text-[10px] text-[var(--text-tertiary)]" transform={`translate(0, ${height - margin.bottom})`}>
-            {ticksX.map(tick => (
-                <g key={tick.date.toISOString()} transform={`translate(${tick.x}, 0)`}>
-                    <text y="20" textAnchor="middle" fill="currentColor">
-                        {formatDateTick(tick.date)}
-                    </text>
-                </g>
-            ))}
-        </g>
-
-        {/* Area and Line */}
-        <path d={areaPath} fill="url(#areaGradient)" />
-        <path d={linePath} fill="none" stroke="var(--accent-primary)" strokeWidth="2.5" strokeLinecap="round" className="animate-draw" />
+    const handleMouseMove = (event: React.MouseEvent<SVGSVGElement>) => {
+        if (!svgRef.current || !xScale) return;
+        const svgPoint = svgRef.current.createSVGPoint();
+        svgPoint.x = event.clientX;
+        svgPoint.y = event.clientY;
+        const inverted = svgPoint.matrixTransform(svgRef.current.getScreenCTM()?.inverse());
         
-        {/* Interaction layer */}
-        <rect
-            x={margin.left}
-            y={margin.top}
-            width={innerWidth}
-            height={innerHeight}
-            fill="transparent"
-            onMouseMove={handleMouseMove}
-            onMouseLeave={handleMouseLeave}
-        />
+        let closestPoint: GraphDataPoint | null = null;
+        let minDistance = Infinity;
 
-        {/* Tooltip */}
-        {activePoint && tooltipPosition && (
-            <g transform={`translate(${tooltipPosition.x}, ${tooltipPosition.y})`}>
-                <circle r="5" fill="var(--accent-primary)" stroke="var(--bg-secondary)" strokeWidth="2" />
-                <g transform="translate(0, -10)" className="pointer-events-none">
-                    <rect x="-45" y="-30" width="90" height="25" rx="5" fill="var(--bg-secondary)" stroke="var(--border-secondary)" />
-                    <text x="0" y="-17.5" textAnchor="middle" fill="var(--text-primary)" fontSize="12" fontWeight="bold">
-                        ${(activePoint.total / 100).toFixed(2)}
-                    </text>
-                </g>
+        data.forEach(d => {
+            const date = parseLocalDate(d.date);
+            const pointX = xScale(date);
+            const distance = Math.abs(pointX - inverted.x);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestPoint = d;
+            }
+        });
+
+        if (closestPoint) {
+            setActivePoint(closestPoint);
+            setTooltipPosition({
+                x: xScale(parseLocalDate(closestPoint.date)),
+                y: yScale(closestPoint.total)
+            });
+        }
+    };
+
+    const handleMouseLeave = () => {
+        setActivePoint(null);
+        setTooltipPosition(null);
+    };
+    
+    if (!xScale || !yScale) {
+        return <div className="w-full h-full flex items-center justify-center text-sm text-[var(--text-secondary)]">Not enough data.</div>;
+    }
+
+    return (
+        <div className="relative w-full h-full">
+        <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave} style={{ overflow: 'visible' }}>
+            {/* Axes and Grid lines */}
+            {ticksY.map(({ value, y }) => (
+            <g key={`y-tick-${value}`} className="text-[10px] text-[var(--text-tertiary)]">
+                <line x1={margin.left} y1={y} x2={width - margin.right} y2={y} stroke="var(--border-secondary)" strokeDasharray="2,2" />
+                <text x={margin.left - 8} y={y + 3} textAnchor="end">
+                ${(value / 100).toFixed(value > 0 ? 2 : 0)}
+                </text>
             </g>
+            ))}
+            {ticksX.map(({ date, x }) => (
+            <g key={`x-tick-${date.toISOString()}`} className="text-[10px] text-[var(--text-tertiary)]">
+                <text x={x} y={height - margin.bottom + 15} textAnchor="middle">
+                {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </text>
+            </g>
+            ))}
+            <line x1={margin.left} y1={height - margin.bottom} x2={width - margin.right} y2={height - margin.bottom} stroke="var(--border-primary)" />
+            <line y1={margin.top} x1={margin.left} y2={height - margin.bottom} x2={margin.left} stroke="var(--border-primary)" />
+            
+            {/* Area Gradient */}
+            <defs>
+            <linearGradient id="area-gradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--accent-primary)" stopOpacity={0.3} />
+                <stop offset="100%" stopColor="var(--accent-primary)" stopOpacity={0} />
+            </linearGradient>
+            </defs>
+            <path d={areaPath} fill="url(#area-gradient)" stroke="none" />
+            
+            {/* Line Path */}
+            <path d={linePath} fill="none" stroke="var(--accent-primary)" strokeWidth="2.5" />
+
+            {/* Data Points for hover */}
+            {data.map(d => (
+            <circle key={d.date} cx={xScale(parseLocalDate(d.date))} cy={yScale(d.total)} r="4" fill="var(--accent-primary)" />
+            ))}
+
+            {/* Tooltip */}
+            {activePoint && tooltipPosition && (
+                <g transform={`translate(${tooltipPosition.x}, ${tooltipPosition.y})`}>
+                    <circle r="6" fill="var(--accent-primary)" stroke="var(--bg-secondary)" strokeWidth="2" />
+                </g>
+            )}
+        </svg>
+
+        {activePoint && tooltipPosition && (
+            <div 
+                className="absolute bg-black/80 text-white p-2 rounded-md text-xs pointer-events-none shadow-lg"
+                style={{
+                    top: tooltipPosition.y - 50,
+                    left: tooltipPosition.x,
+                    transform: 'translateX(-50%)',
+                }}
+            >
+                <div>{parseLocalDate(activePoint.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                <div className="font-bold">${(activePoint.total / 100).toFixed(2)}</div>
+            </div>
         )}
-      </svg>
-      <style>{`
-        @keyframes draw {
-            from { stroke-dasharray: 1000; stroke-dashoffset: 1000; }
-            to { stroke-dasharray: 1000; stroke-dashoffset: 0; }
-        }
-        .animate-draw {
-            animation: draw 1.5s ease-out forwards;
-        }
-      `}</style>
-    </div>
-  );
+        </div>
+    );
 };
 
 export default LineGraph;

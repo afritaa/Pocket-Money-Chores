@@ -1,11 +1,15 @@
 
+
+
+
 export interface BonusNotification {
   id: string;
   amount: number;
   note?: string;
+  createdAt: string; // YYYY-MM-DD
 }
 
-export type CompletionState = 'completed' | 'cashed_out' | 'pending_cash_out';
+export type CompletionState = 'completed' | 'cashed_out' | 'pending_cash_out' | 'pending_acceptance';
 
 export enum Day {
   Sun = 'Sun',
@@ -36,6 +40,9 @@ export interface Chore {
   order: number; // For drag-and-drop sorting
   type?: 'chore' | 'bonus';
   note?: string;
+  createdAt?: string; // Date of creation 'YYYY-MM-DD'
+  isOneOff?: boolean; // Is it a one-time chore?
+  oneOffDate?: string; // Date for one-off chore 'YYYY-MM-DD'
 }
 
 export interface AiChoreSuggestion {
@@ -59,6 +66,7 @@ export interface EarningsRecord {
   completionsSnapshot?: CompletionSnapshot[]; // Snapshot of what was completed
   note?: string; // For bonuses
   type?: 'chore' | 'bonus';
+  seenByParent?: boolean;
 }
 
 export interface Profile {
@@ -67,6 +75,7 @@ export interface Profile {
   image: string | null;
   payDayConfig: PayDayConfig;
   theme: string;
+  parentViewTheme?: string;
   hasSeenThemePrompt?: boolean;
   showPotentialEarnings: boolean;
 }
@@ -77,7 +86,6 @@ export interface ParentSettings {
   defaultChoreValue: number; // in cents
   defaultBonusValue: number; // in cents
   customCategories: string[];
-  areSoundsEnabled: boolean;
 }
 
 export interface GraphDataPoint {
@@ -90,4 +98,13 @@ export interface PastChoreApproval {
   choreId: string;
   choreName: string;
   date: string; // YYYY-MM-DD
+}
+
+export interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: string[];
+  readonly userChoice: Promise<{
+    outcome: 'accepted' | 'dismissed';
+    platform: string;
+  }>;
+  prompt(): Promise<void>;
 }

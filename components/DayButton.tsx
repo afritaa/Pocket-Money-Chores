@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 import { Day } from '../types';
 import { DAY_SHORT_NAMES, CheckIcon, ExclamationIcon, CoinIcon, HourglassIcon } from '../constants';
@@ -10,6 +8,7 @@ interface DayButtonProps {
   isCompleted: boolean;
   isCashedOut: boolean;
   isPendingCashOut: boolean;
+  isPendingAcceptance: boolean;
   isToday: boolean;
   isPast: boolean;
   onClick: (e: React.MouseEvent) => void;
@@ -18,29 +17,36 @@ interface DayButtonProps {
   isBonus: boolean;
 }
 
-const DayButton: React.FC<DayButtonProps> = ({ day, isAssigned, isCompleted, isCashedOut, isPendingCashOut, isToday, isPast, onClick, isKidsMode, isPendingApproval, isBonus }) => {
-  const baseClasses = "w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full font-bold text-xs sm:text-sm transition-all duration-300";
+const DayButton: React.FC<DayButtonProps> = ({ day, isAssigned, isCompleted, isCashedOut, isPendingCashOut, isPendingAcceptance, isToday, isPast, onClick, isKidsMode, isPendingApproval, isBonus }) => {
+  const baseClasses = "w-8 h-8 sm:w-10 sm:h-10 mx-auto flex items-center justify-center rounded-full font-bold text-xs sm:text-sm transition-all duration-300";
   let dynamicClasses = '';
-  const isDisabled = !isAssigned || isBonus || (isKidsMode && (isCashedOut || isPendingCashOut));
+  let content: React.ReactNode = DAY_SHORT_NAMES[day];
+  const isDisabled = isBonus || (isKidsMode && (isCashedOut || isPendingCashOut || isPendingAcceptance)) || (!isKidsMode && !isAssigned);
 
-  if (isBonus) {
-    dynamicClasses = `bg-[var(--warning)] text-[var(--warning-text)]`;
-  } else if (isCashedOut) {
+  if (isCashedOut) {
     dynamicClasses = 'bg-[var(--success-cashed-out-bg)] text-[var(--success-cashed-out-text)]';
-  } else if (isPendingCashOut) {
+    content = <CoinIcon className="w-5 h-5 sm:w-6 sm:h-6" />;
+  } else if (isPendingCashOut || isPendingAcceptance) {
     dynamicClasses = 'bg-[var(--bg-tertiary)] opacity-70';
+    content = <HourglassIcon className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500" />;
   } else if (isCompleted) {
     dynamicClasses = 'bg-[var(--success)] text-[var(--success-text)]';
+    content = <CheckIcon className="w-4 h-4 sm:w-5 sm:h-5" />;
   } else if (isPendingApproval) {
     dynamicClasses = `bg-[var(--warning)] text-[var(--warning-text)] ${!isKidsMode ? 'cursor-pointer' : ''}`;
+    content = <ExclamationIcon className="w-4 h-4 sm:w-5 sm:h-5" />;
+  } else if (isBonus && isAssigned) {
+    dynamicClasses = 'bg-[var(--warning)] text-[var(--warning-text)]';
+    content = <span className="text-sm sm:text-base font-bold">$</span>;
   } else if (isAssigned) {
     dynamicClasses = 'bg-[var(--bg-tertiary)] hover:opacity-80 border border-[var(--border-secondary)] cursor-pointer text-[var(--text-primary)]';
+    // content is already DAY_SHORT_NAMES[day]
   } else {
-    dynamicClasses = 'text-[var(--text-tertiary)]';
+    dynamicClasses = 'text-[var(--text-tertiary)] opacity-50';
   }
 
-  if (isToday && !isBonus) {
-    dynamicClasses += ' ring-2 ring-offset-2 ring-offset-[var(--bg-secondary)] ring-[var(--accent-primary)]';
+  if (isToday) {
+    dynamicClasses += ' ring-2 ring-offset-2 ring-offset-[var(--card-bg)] ring-[var(--accent-primary)]';
   }
 
   return (
@@ -50,7 +56,7 @@ const DayButton: React.FC<DayButtonProps> = ({ day, isAssigned, isCompleted, isC
       className={`${baseClasses} ${dynamicClasses} disabled:cursor-not-allowed disabled:opacity-60 disabled:transform-none`}
       aria-label={`${day} - ${isAssigned ? 'Assigned' : 'Not assigned'}${isCompleted ? ', Completed' : ''}${isPendingApproval ? ', Pending Approval' : ''}${isPast ? ', Past day' : ''}${isCashedOut ? ', Cashed Out' : ''}${isPendingCashOut ? ', Pending Cash Out' : ''}${isBonus ? ', Bonus' : ''}`}
     >
-      {isBonus ? <span className="text-sm sm:text-base font-bold">$</span> : isCashedOut ? <CoinIcon className="w-5 h-5 sm:w-6 sm:h-6"/> : isPendingCashOut ? <HourglassIcon className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500" /> : isCompleted ? <CheckIcon className="w-4 h-4 sm:w-5 sm:h-5"/> : isPendingApproval ? <ExclamationIcon className="w-4 h-4 sm:w-5 sm:h-5" /> : DAY_SHORT_NAMES[day]}
+      {content}
     </button>
   );
 };

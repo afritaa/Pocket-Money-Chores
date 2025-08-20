@@ -1,524 +1,134 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { CoinIcon, HistoryIcon, UserCircleIcon, ChevronLeftIcon, ChevronRightIcon, DAY_SHORT_NAMES, DAYS_OF_WEEK } from '../constants';
-import { Profile, Day } from '../types';
+import React, { useState, useEffect, useRef, useMemo, forwardRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { UserCircleIcon, MenuIcon } from '../constants';
+import { Profile, BonusNotification } from '../types';
+import ProfileMenu from './ProfileMenu';
+
+const AnimatedNumber = React.memo(({ value }: { value: number }) => {
+    // This is a placeholder now, the real component is in App.tsx
+    // It's kept here to avoid breaking the component if used elsewhere unexpectedly
+    // but the primary AnimatedNumber is now in App.tsx
+    const [displayValue, setDisplayValue] = useState((value / 100).toFixed(2));
+    useEffect(() => {
+        setDisplayValue((value / 100).toFixed(2));
+    }, [value]);
+    return <span>{displayValue}</span>;
+});
+
 
 interface HeaderProps {
-  earnings: number;
-  isKidsMode: boolean;
-  profile: Profile | null | undefined;
-  onCashOut: () => void;
-  onShowHistory: () => void;
-  isCashOutDisabled: boolean;
-  showCashOutButton: boolean;
-  viewMode: 'weekly' | 'daily';
-  setViewMode: (mode: 'weekly' | 'daily') => void;
-  weeklyTitle: string;
-  isToday: boolean;
-  selectedDate: Date;
-  setSelectedDate: (date: Date) => void;
-  currentWeekDays: Date[];
-  handlePreviousWeek: () => void;
-  handleNextWeek: () => void;
-  isViewingCurrentWeek: boolean;
-  handleGoToCurrentWeek: () => void;
-  onUpdateProfileImage: (profileId: string, image: string | null) => void;
-  isTouchDevice: boolean;
-  onEditCurrentProfile: (profile: Profile) => void;
+    earnings: number;
+    isKidsMode: boolean;
+    profile: Profile | undefined;
+    onOpenMenu: () => void;
+    pendingCount: number;
+    pastApprovalsCount: number;
+    onShowPending: () => void;
+    onShowPastApprovals: () => void;
+    onEditProfile: (profile: Profile) => void;
+    onShowHistory: () => void;
+    isProfileMenuOpen: boolean;
+    onProfileMenuToggle: () => void;
+    onProfileMenuClose: () => void;
+    onCashOut: (targetProfileId?: string) => void;
 }
 
-const usePrevious = <T,>(value: T): T | undefined => {
-  const ref = useRef<T | undefined>(undefined);
-  useEffect(() => {
-    ref.current = value;
-  }, [value]);
-  return ref.current;
-};
 
-const TickerDigit = React.memo(({ digit }: { digit: number }) => {
-  const transformStyle = {
-    transform: `translateY(-${digit * 10}%)`, // 10 digits in the column, so each is 10%
-    transition: 'transform 0.8s cubic-bezier(0.23, 1, 0.32, 1)',
-  };
-
-  return (
-    <span className="inline-block h-[1em] overflow-hidden leading-[1em] align-bottom">
-      <span className="inline-block" style={transformStyle}>
-        {Array.from({ length: 10 }).map((_, i) => (
-          <span key={i} className="block h-[1em] leading-[1em]">
-            {i}
-          </span>
-        ))}
-      </span>
-    </span>
-  );
-});
-
-const AnimatedNumber = React.memo(({ value, isKidsMode }: { value: number, isKidsMode: boolean }) => {
-    const amountString = (value / 100).toFixed(2);
-
-    if (!isKidsMode) {
-      return (
-        <>
-          <span>$</span>
-          {amountString}
-        </>
-      );
-    }
-
-    return (
-      <>
-        <span className="mr-1">$</span>
-        {amountString.split('').map((char, index) => {
-          if (char === '.') {
-            return <span key={index}>.</span>;
-          }
-          const digit = parseInt(char, 10);
-          return <TickerDigit key={index} digit={digit} />;
-        })}
-      </>
-    );
-});
-
-
-const WeeklyDatePicker = ({ selectedDate, onDateSelect, isTouchDevice }: { selectedDate: Date, onDateSelect: (date: Date) => void, isTouchDevice: boolean }) => {
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [currentWeekIndex, setCurrentWeekIndex] = useState(1); // 0: prev, 1: current, 2: next
-
-  const allDates = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const currentDayOfWeek = today.getDay(); // Sunday - 0
-    
-    // Start of the previous week (Sunday)
-    const startOfLastWeek = new Date(today);
-    startOfLastWeek.setDate(today.getDate() - currentDayOfWeek - 7);
-    
-    const dateArray = Array.from({ length: 21 }).map((_, i) => {
-      const d = new Date(startOfLastWeek);
-      d.setDate(d.getDate() + i);
-      return d;
-    });
-    return dateArray;
-  }, []);
-  
-  const weeks = useMemo(() => {
-    return [allDates.slice(0, 7), allDates.slice(7, 14), allDates.slice(14, 21)];
-  }, [allDates]);
-  
-  // Set initial scroll position to the current week
-  useEffect(() => {
-    if (scrollContainerRef.current) {
-        const container = scrollContainerRef.current;
-        setTimeout(() => {
-            container.scrollLeft = container.offsetWidth; // Start on the second week (current week)
-        }, 0);
-    }
-  }, []);
-
-  const handleScroll = () => {
-    if (scrollContainerRef.current) {
-      const { scrollLeft, offsetWidth } = scrollContainerRef.current;
-      const newIndex = Math.round(scrollLeft / offsetWidth);
-      if (newIndex !== currentWeekIndex) {
-        setCurrentWeekIndex(newIndex);
-      }
-    }
-  };
-
-  const scrollToWeek = (index: number) => {
-    if (scrollContainerRef.current) {
-      const container = scrollContainerRef.current;
-      container.scrollTo({
-        left: container.offsetWidth * index,
-        behavior: 'smooth'
-      });
-    }
-  };
-
-  const formatDateString = (date: Date) => `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
-  const todayString = formatDateString(new Date());
-
-  return (
-    <div className="relative w-full mt-4 p-2 rounded-xl select-none animate-fade-in-fast">
-       {!isTouchDevice && currentWeekIndex > 0 && (
-          <button 
-              onClick={() => scrollToWeek(currentWeekIndex - 1)}
-              className="absolute left-1 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-white/20 transition-colors z-10"
-              aria-label="Previous week"
-          >
-              <ChevronLeftIcon className="h-6 w-6 text-[var(--text-secondary)]"/>
-          </button>
-      )}
-      {!isTouchDevice && currentWeekIndex < weeks.length - 1 && (
-          <button 
-              onClick={() => scrollToWeek(currentWeekIndex + 1)}
-              className="absolute right-1 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-white/20 transition-colors z-10"
-              aria-label="Next week"
-          >
-              <ChevronRightIcon className="h-6 w-6 text-[var(--text-secondary)]"/>
-          </button>
-      )}
-
-      <div className={`w-full ${isTouchDevice ? '' : 'max-w-[calc(100%-5rem)] mx-auto'}`}>
-        <div className="grid grid-cols-7 gap-1 text-center text-xs font-bold text-[var(--text-secondary)] mb-2 px-1">
-          {DAYS_OF_WEEK.map(day => (
-              <div key={day}>{DAY_SHORT_NAMES[day]}</div>
-          ))}
-        </div>
-        <div
-            ref={scrollContainerRef}
-            className="flex overflow-x-auto scrollbar-hide"
-            onScroll={handleScroll}
-            style={{ scrollSnapType: 'x mandatory' }}
-        >
-            {weeks.map((week, weekIndex) => (
-                <div key={weekIndex} className="grid grid-cols-7 gap-1 flex-[0_0_100%]" style={{ scrollSnapAlign: 'start' }}>
-                    {week.map((date) => {
-                      const isSelected = formatDateString(date) === formatDateString(selectedDate);
-                      const isToday = formatDateString(date) === todayString;
-                      return (
-                        <div key={formatDateString(date)} className="flex justify-center">
-                          <button
-                            onClick={() => onDateSelect(date)}
-                            className={`h-10 flex items-center justify-center rounded-full transition-all duration-200 font-bold text-sm ${isTouchDevice ? 'w-full' : 'w-10'} ${
-                              isSelected
-                                ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)]'
-                                : isToday
-                                ? 'bg-[var(--accent-primary)] bg-opacity-20 text-[var(--text-primary)]'
-                                : 'bg-transparent hover:bg-white/20 text-[var(--text-primary)]'
-                            }`}
-                            aria-label={`Select date ${date.toLocaleDateString()}`}
-                          >
-                            {date.getDate()}
-                          </button>
-                        </div>
-                      );
-                    })}
-                </div>
-            ))}
-        </div>
-      </div>
-
-       <style>{`
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        .select-none { -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
-      `}</style>
-    </div>
-  );
-};
-
-
-
-const Header: React.FC<HeaderProps> = ({ 
-  earnings, 
-  isKidsMode, 
-  profile, 
-  onCashOut, 
-  onShowHistory, 
-  isCashOutDisabled, 
-  showCashOutButton, 
-  viewMode,
-  setViewMode,
-  weeklyTitle,
-  isToday,
-  selectedDate,
-  setSelectedDate,
-  currentWeekDays,
-  handlePreviousWeek,
-  handleNextWeek,
-  isViewingCurrentWeek,
-  handleGoToCurrentWeek,
-  onUpdateProfileImage,
-  isTouchDevice,
-  onEditCurrentProfile
+const Header: React.FC<HeaderProps> = ({
+    earnings,
+    isKidsMode,
+    profile,
+    onOpenMenu,
+    pendingCount,
+    pastApprovalsCount,
+    onShowPending,
+    onShowPastApprovals,
+    onEditProfile,
+    onShowHistory,
+    isProfileMenuOpen,
+    onProfileMenuToggle,
+    onProfileMenuClose,
+    onCashOut
 }) => {
-  const [showFireworks, setShowFireworks] = useState(false);
-  const prevEarnings = usePrevious(earnings);
-  const [isPulsing, setIsPulsing] = useState(false);
-  const fireworksTimer = useRef<number | undefined>(undefined);
-  const imageInputRef = useRef<HTMLInputElement>(null);
 
-  // Effect for fireworks. The key prop on the JSX element does the re-triggering.
-  // This effect just manages the visibility window.
-  useEffect(() => {
-    if (isKidsMode && prevEarnings !== undefined && earnings > prevEarnings) {
-      setShowFireworks(true);
-      if (fireworksTimer.current) {
-        clearTimeout(fireworksTimer.current);
-      }
-      fireworksTimer.current = window.setTimeout(() => {
-        setShowFireworks(false);
-      }, 1500); // Fireworks visible duration
-    }
-    return () => {
-      if (fireworksTimer.current) {
-        clearTimeout(fireworksTimer.current);
-      }
-    };
-  }, [earnings, prevEarnings, isKidsMode]);
+    const totalNotifications = useMemo(() => pendingCount + pastApprovalsCount, [pendingCount, pastApprovalsCount]);
 
-  // Effect for pulsing. This is now robust against rapid updates because
-  // onAnimationEnd resets the state, allowing this effect to trigger a state
-  // change (false -> true) on the next earnings increase.
-  useEffect(() => {
-    if (isKidsMode && prevEarnings !== undefined && earnings > prevEarnings) {
-      setIsPulsing(true);
-    }
-  }, [earnings, prevEarnings, isKidsMode]);
-
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0] && profile?.id) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        onUpdateProfileImage(profile.id, reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-    // Reset input to allow re-uploading the same file
-    if (e.target) e.target.value = '';
-  };
-  
-  const earningsContent = (
-    <div className="flex items-center space-x-4 px-4 py-3 sm:px-6">
-      <button 
-        onClick={() => profile && onEditCurrentProfile(profile)} 
-        className="flex-shrink-0 rounded-full focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)] focus:ring-[var(--accent-primary)] transition-all"
-        aria-label={`Edit ${profile?.name}'s profile`}
-      >
-        {profile?.image ? (
-          <img src={profile.image} alt={profile.name} className="w-10 h-10 rounded-full object-cover"/>
-        ) : (
-          <UserCircleIcon className="w-10 h-10 text-[var(--text-tertiary)]"/>
-        )}
-      </button>
-      <div className="text-left">
-        <div className="text-sm font-medium text-[var(--text-secondary)] whitespace-nowrap">
-            {profile?.name ? `${profile.name}'s Current Earnings` : 'Current Earnings'}
-        </div>
-        <div className="flex items-center text-2xl sm:text-3xl font-bold text-[var(--text-primary)]" style={{ minWidth: '8ch', fontVariantNumeric: 'tabular-nums' }}>
-          <AnimatedNumber value={earnings} isKidsMode={false} />
-        </div>
-      </div>
-    </div>
-  );
- 
-  const kidsEarningsContent = (
-    <div className="flex flex-col items-center space-y-1 py-3">
-       {showFireworks && isKidsMode && (
-         <div key={`fireworks-kid-${earnings}`} className="absolute inset-0 pointer-events-none flex items-center justify-center">
-           {Array.from({ length: 15 }).map((_, i) => (
-             <div
-               key={i}
-               className="absolute text-xl font-bold text-[var(--success)] animate-fireworks-burst"
-               style={{
-                 '--angle': `${Math.random() * 360}deg`,
-                 '--distance': `${30 + Math.random() * 40}px`,
-                 animationDelay: `${Math.random() * 0.2}s`,
-               } as React.CSSProperties}
-             >$</div>
-           ))}
-         </div>
-       )}
-       <CoinIcon className="h-8 w-8" />
-       <div className="text-center">
-           <div className="text-sm font-medium text-[var(--text-secondary)]">Earnings</div>
-           <div className="flex justify-center items-center text-3xl font-bold text-[var(--text-primary)]" style={{ minWidth: '8ch', fontVariantNumeric: 'tabular-nums' }}>
-              <AnimatedNumber value={earnings} isKidsMode={isKidsMode} />
-           </div>
-       </div>
-   </div>
- );
-  
-  const WeekNavigator = () => {
     return (
-      <div className={`w-full flex items-center justify-between p-2 mt-4 animate-fade-in-fast`}>
-        {/* Left Arrow (or spacer on touch) */}
-        {!isTouchDevice ? (
-            <button onClick={handlePreviousWeek} className="p-2 rounded-full hover:bg-white/20 transition-colors" aria-label="Previous week">
-                <ChevronLeftIcon />
-            </button>
-        ) : <div className="w-10 h-10" /> /* Spacer */}
-
-        {/* Centered Content */}
-        <div className="flex-grow text-center px-2">
-          <h3 className="text-lg font-bold text-[var(--text-primary)]">
-              {weeklyTitle}
-          </h3>
-          <div className="h-5"> {/* Container to prevent layout shift */}
-            <button
-              onClick={handleGoToCurrentWeek}
-              className={`text-sm font-semibold text-[var(--accent-primary)] hover:underline transition-opacity duration-300 ${isViewingCurrentWeek ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-              aria-hidden={isViewingCurrentWeek}
-              tabIndex={isViewingCurrentWeek ? -1 : 0}
-            >
-              Go to This Week
-            </button>
-          </div>
-        </div>
-
-        {/* Right Arrow (or spacer on touch) */}
-        {!isTouchDevice ? (
-            <button onClick={handleNextWeek} disabled={isViewingCurrentWeek} className="p-2 rounded-full hover:bg-white/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" aria-label="Next week">
-                <ChevronRightIcon />
-            </button>
-        ) : <div className="w-10 h-10" /> /* Spacer */}
-      </div>
-    );
-  };
-  
-  return (
-    <>
-      {isKidsMode ? (
-        <div className="flex flex-col items-center gap-4">
-          <div className="flex items-center justify-center text-[var(--text-primary)] flex-shrink-0">
-            <input
-              type="file"
-              accept="image/*"
-              ref={imageInputRef}
-              onChange={handleImageChange}
-              className="hidden"
-              aria-label="Upload profile picture"
-            />
-            <button
-              onClick={() => imageInputRef.current?.click()}
-              className="rounded-full focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)] focus:ring-[var(--accent-primary)] transition-all"
-              aria-label="Change profile picture"
-            >
-              {profile ? (
-                profile.image ? (
-                  <img src={profile.image} alt="Profile" className="h-24 w-24 rounded-full object-cover border-4 border-white/30 hover:opacity-90 transition-opacity" />
-                ) : (
-                  <UserCircleIcon className="h-24 w-24 text-[var(--text-tertiary)] hover:opacity-90 transition-opacity" />
-                )
-              ) : (
-                <UserCircleIcon className="h-24 w-24 text-[var(--text-tertiary)] hover:opacity-90 transition-opacity" />
-              )}
-            </button>
-          </div>
-          <div 
-            className={`relative w-full max-w-xs rounded-2xl overflow-hidden bg-[rgba(255,255,255,0.15)] 
-                        ${isPulsing && isKidsMode ? 'animate-pulse-once' : ''}`}
-            onAnimationEnd={() => setIsPulsing(false)}
-          >
-              <div className="animate-shimmer absolute inset-0"></div>
-              <div className="relative z-10">
-                {kidsEarningsContent}
-                {showCashOutButton && (
-                    <div className="px-4 pb-4 animate-fade-in-fast">
-                      <button 
-                          onClick={onCashOut}
-                          disabled={isCashOutDisabled}
-                          className="w-full bg-[var(--success)] hover:opacity-80 text-[var(--success-text)] font-bold py-3 px-4 rounded-lg transform hover:-translate-y-px transition-all disabled:bg-[var(--bg-tertiary)] disabled:text-[var(--text-tertiary)] disabled:shadow-none disabled:cursor-not-allowed disabled:transform-none"
-                      >
-                          Cash Out
-                      </button>
-                    </div>
-                )}
-              </div>
-          </div>
-        </div>
-      ) : (
         <>
-            <div className="w-full grid grid-cols-2 md:grid-cols-3 items-center gap-4">
-                <div className="justify-self-start">
-                    {earningsContent}
-                </div>
-
-                <div className="hidden md:flex justify-center">
-                    <div className="bg-[var(--bg-tertiary)] rounded-full p-1.5 flex items-center">
-                        <button onClick={() => setViewMode('weekly')} className={`px-6 py-2 text-base font-semibold rounded-full transition-colors duration-300 ${viewMode === 'weekly' ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)]' : 'text-[var(--text-secondary)]'}`}>Weekly</button>
-                        <button onClick={() => setViewMode('daily')} className={`px-6 py-2 text-base font-semibold rounded-full transition-colors duration-300 ${viewMode === 'daily' ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)]' : 'text-[var(--text-secondary)]'}`}>Daily</button>
+            {isKidsMode ? (
+                <header style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+                    <div className="bg-[var(--header-bg)] text-[var(--header-text)] py-2 sm:py-4 rounded-b-lg">
+                        <div className="flex items-center justify-between px-2 sm:px-4">
+                            <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
+                                <button onClick={onOpenMenu} className="p-2 -m-2 rounded-full hover:bg-black/10 transition-colors flex-shrink-0">
+                                    <MenuIcon className="h-6 w-6 sm:h-8 sm:w-8"/>
+                                </button>
+                                {profile && (
+                                    <h2 className="font-bold text-xl sm:text-2xl leading-tight truncate">{`${profile.name}'s Pocket Money Chores.`}</h2>
+                                )}
+                            </div>
+                        </div>
                     </div>
-                </div>
-                
-                <div className="justify-self-end col-start-2 md:col-start-3">
-                    <div className="flex flex-col items-end gap-2">
-                        {showCashOutButton && (
-                            <button 
-                                onClick={onCashOut}
-                                disabled={isCashOutDisabled}
-                                className="min-w-[150px] flex justify-center bg-[var(--success)] hover:opacity-80 text-[var(--success-text)] font-bold py-2 px-4 rounded-lg transform hover:-translate-y-px transition-all disabled:bg-[var(--bg-tertiary)] disabled:text-[var(--text-tertiary)] disabled:shadow-none disabled:cursor-not-allowed disabled:transform-none"
-                            >
-                                Cash Out
-                            </button>
-                        )}
-                        
-                        <button 
-                            onClick={onShowHistory}
-                            className="min-w-[150px] bg-[var(--bg-tertiary)] hover:opacity-80 text-[var(--text-primary)] font-semibold py-2 px-4 rounded-lg border border-[var(--border-secondary)] transition-colors flex items-center gap-1.5 justify-center"
-                        >
-                            <HistoryIcon />
-                            <span>History</span>
-                        </button>
+                </header>
+            ) : (
+                // Parent Mode Header
+                <header style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+                    <div className="bg-[var(--header-bg)] text-[var(--header-text)] py-2 sm:py-4 rounded-b-lg">
+                        <div className="flex justify-between items-center px-2 sm:px-4">
+                            <div className="flex items-center gap-2 sm:gap-4">
+                                <button onClick={onOpenMenu} className="p-2 -m-2 rounded-full hover:bg-black/10 transition-colors">
+                                    <MenuIcon className="h-6 w-6 sm:h-8 sm:w-8" />
+                                </button>
+                                <h1 className="font-bold text-xl sm:text-2xl text-left truncate">Pocket Money Chores.</h1>
+                            </div>
+                            
+                            <div className="relative">
+                                {profile ? (
+                                    <>
+                                        <button
+                                            onClick={onProfileMenuToggle}
+                                            className="flex items-center gap-2 font-bold py-1 pl-2 pr-1 sm:pl-3 rounded-full transition-colors"
+                                            style={{ backgroundColor: 'var(--page-bg)', color: 'var(--text-primary)' }}
+                                            aria-label="Open profile menu"
+                                            aria-expanded={isProfileMenuOpen}
+                                        >
+                                            <span className="text-sm sm:text-base">$<AnimatedNumber value={earnings} /></span>
+                                            <div className="relative w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover border-2 border-[var(--header-bg)]">
+                                                {profile.image ? (
+                                                    <img src={profile.image} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                                                ) : (
+                                                    <UserCircleIcon className="w-full h-full" />
+                                                )}
+                                                {totalNotifications > 0 && (
+                                                    <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-[var(--danger)] text-[10px] leading-none sm:text-xs font-bold text-white ring-2 ring-[var(--header-bg)]">
+                                                        {totalNotifications}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </button>
+                                        <ProfileMenu
+                                            isOpen={isProfileMenuOpen}
+                                            onClose={onProfileMenuClose}
+                                            profile={profile}
+                                            onEdit={() => onEditProfile(profile)}
+                                            onCashOut={() => onCashOut()}
+                                            onHistory={onShowHistory}
+                                            onPending={onShowPending}
+                                            pendingCount={pendingCount}
+                                            pastApprovalsCount={pastApprovalsCount}
+                                            onPastApprovals={onShowPastApprovals}
+                                        />
+                                    </>
+                                ) : (
+                                    <div className="w-10 h-10" /> 
+                                )}
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
-            
-            <div className="mt-6">
-                <div className="flex md:hidden items-center justify-center">
-                    <div className="bg-[var(--bg-tertiary)] rounded-full p-1.5 flex items-center">
-                        <button onClick={() => setViewMode('weekly')} className={`px-6 py-2 text-base font-semibold rounded-full transition-colors duration-300 ${viewMode === 'weekly' ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)]' : 'text-[var(--text-secondary)]'}`}>Weekly</button>
-                        <button onClick={() => setViewMode('daily')} className={`px-6 py-2 text-base font-semibold rounded-full transition-colors duration-300 ${viewMode === 'daily' ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)]' : 'text-[var(--text-secondary)]'}`}>Daily</button>
-                    </div>
-                </div>
-              
-              {viewMode === 'weekly' && (
-                <WeekNavigator />
-              )}
-              {viewMode === 'daily' && !isKidsMode && (
-                <WeeklyDatePicker selectedDate={selectedDate} onDateSelect={setSelectedDate} isTouchDevice={isTouchDevice} />
-              )}
-            </div>
+                </header>
+            )}
         </>
-      )}
-      <style>{`
-          @keyframes fireworks-burst {
-              from {
-                  transform: translate(0, 0) scale(0.5);
-                  opacity: 1;
-              }
-              to {
-                  transform: translate(calc(cos(var(--angle)) * var(--distance)), calc(sin(var(--angle)) * var(--distance))) scale(0);
-                  opacity: 0;
-              }
-          }
-          .animate-fireworks-burst {
-              animation: fireworks-burst 0.8s ease-out forwards;
-          }
-           @keyframes fade-in-fast { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-          .animate-fade-in-fast { animation: fade-in-fast 0.3s ease-out forwards; }
-          @keyframes shimmer {
-            0% { background-position: -200% -200%; }
-            100% { background-position: 200% 200%; }
-          }
-          .animate-shimmer {
-            background-image: linear-gradient(
-              135deg,
-              transparent 30%,
-              rgba(252, 251, 222, 0.4) 45%,
-              rgba(252, 251, 222, 0.6) 50%,
-              rgba(252, 251, 222, 0.4) 55%,
-              transparent 70%
-            );
-            background-size: 200% 200%;
-            background-repeat: no-repeat;
-            animation: shimmer 10s ease-in-out infinite;
-            pointer-events: none;
-          }
-          @keyframes pulse-once {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-          }
-          .animate-pulse-once {
-            animation: pulse-once 0.6s ease-in-out;
-          }
-      `}</style>
-    </>
-  );
+    );
 };
 
 export default Header;
