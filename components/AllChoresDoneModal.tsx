@@ -1,24 +1,32 @@
 
+
 import React, { useEffect } from 'react';
-import useSound from '../hooks/useSound';
-import { ALL_CHORES_DONE_SOUND } from '../sounds';
 
 interface AllChoresDoneModalProps {
   isOpen: boolean;
   onClose: () => void;
   dailyAmount: number;
-  areSoundsEnabled: boolean;
 }
 
-const AllChoresDoneModal: React.FC<AllChoresDoneModalProps> = ({ isOpen, onClose, dailyAmount, areSoundsEnabled }) => {
-  const playAllDoneSound = useSound(ALL_CHORES_DONE_SOUND, areSoundsEnabled);
-
+const AllChoresDoneModal: React.FC<AllChoresDoneModalProps> = ({ isOpen, onClose, dailyAmount }) => {
+  // Close on Enter key press
   useEffect(() => {
-    if (isOpen) {
-      playAllDoneSound();
-    }
-  }, [isOpen, playAllDoneSound]);
-  
+      const handleKeyDown = (event: KeyboardEvent) => {
+          if (event.key === 'Enter') {
+              event.preventDefault();
+              onClose();
+          }
+      };
+
+      if (isOpen) {
+          document.addEventListener('keydown', handleKeyDown);
+      }
+
+      return () => {
+          document.removeEventListener('keydown', handleKeyDown);
+      };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (

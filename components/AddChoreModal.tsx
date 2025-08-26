@@ -1,7 +1,7 @@
-
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Day, Chore } from '../types';
 import { DAYS_OF_WEEK, DAY_SHORT_NAMES, DEFAULT_CHORE_CATEGORIES, TrashIcon } from '../constants';
+import { useSound } from '../hooks/useSound';
 
 interface ChoreFormModalProps {
   isOpen: boolean;
@@ -22,12 +22,17 @@ const ChoreFormModal: React.FC<ChoreFormModalProps> = ({ isOpen, onClose, onSave
   const [icon, setIcon] = useState<string | null>(null);
   const [category, setCategory] = useState<string | null>(null);
   const [note, setNote] = useState('');
+  const [repeatType, setRepeatType] = useState<'weekly' | 'oneTime'>('weekly');
+  const [oneTimeDate, setOneTimeDate] = useState('');
+  
   const [error, setError] = useState('');
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
 
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const { playButtonClick } = useSound();
 
   const isBonusEdit = initialData?.type === 'bonus';
 
@@ -42,10 +47,20 @@ const ChoreFormModal: React.FC<ChoreFormModalProps> = ({ isOpen, onClose, onSave
     }
     
     setName(initialData?.name || '');
-    setDays(initialData?.days || [...DAYS_OF_WEEK]);
     setIcon(initialData?.icon || null);
     setCategory(initialData?.category || null);
     setNote(initialData?.note || '');
+
+    if (initialData?.oneTimeDate) {
+        setRepeatType('oneTime');
+        setOneTimeDate(initialData.oneTimeDate);
+        setDays([]);
+    } else {
+        setRepeatType('weekly');
+        setOneTimeDate('');
+        setDays(initialData?.days || [...DAYS_OF_WEEK]);
+    }
+
     setError('');
     setIsConfirmingDelete(false);
     setIsAddingCategory(false);
@@ -91,33 +106,49 @@ const ChoreFormModal: React.FC<ChoreFormModalProps> = ({ isOpen, onClose, onSave
     setValueUnit(newUnit);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = useCallback((e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setError('');
-    if (!name.trim()) {
+    if (!isBonusEdit && !name.trim()) {
       setError('Chore name is required.');
       return;
     }
-    if (!isBonusEdit && days.length === 0) {
-      setError('Please select at least one day.');
-      return;
+    if (!isBonusEdit) {
+        if (repeatType === 'oneTime' && !oneTimeDate) {
+            setError('Please select a date for the one-time chore.');
+            return;
+        }
+        if (repeatType === 'weekly' && days.length === 0) {
+            setError('Please select at least one day for the weekly chore.');
+            return;
+        }
     }
     
     const choreValueRaw = parseFloat(value);
     if (isNaN(choreValueRaw) || choreValueRaw < 0) {
-      setError('Chore value must be a valid, positive number.');
+      setError('Value must be a valid, positive number.');
       return;
     }
     
     const choreValueInCents = valueUnit === 'dollars' ? Math.round(choreValueRaw * 100) : Math.round(choreValueRaw);
 
     if (isNaN(choreValueInCents) || choreValueInCents < 0) {
-      setError('Invalid chore value.');
+      setError('Invalid value.');
       return;
     }
 
-    onSave({ name: name.trim(), value: choreValueInCents, days, icon, category, note, type: isBonusEdit ? 'bonus' : 'chore' });
-  };
+    playButtonClick();
+    onSave({ 
+        name: isBonusEdit ? initialData.name : name.trim(),
+        value: choreValueInCents, 
+        days: isBonusEdit ? initialData.days : repeatType === 'weekly' ? days : [],
+        oneTimeDate: isBonusEdit ? initialData.oneTimeDate : repeatType === 'oneTime' ? oneTimeDate : undefined,
+        icon: isBonusEdit ? initialData.icon : icon,
+        category: isBonusEdit ? initialData.category : category,
+        note: isBonusEdit ? note : '',
+        type: isBonusEdit ? 'bonus' : 'chore'
+    });
+  }, [name, value, valueUnit, days, icon, category, note, isBonusEdit, onSave, initialData, repeatType, oneTimeDate, playButtonClick]);
   
   const handleDelete = () => {
     if (initialData?.id && onDelete) {
@@ -143,6 +174,51 @@ const ChoreFormModal: React.FC<ChoreFormModalProps> = ({ isOpen, onClose, onSave
     setError('');
   };
 
+  const handleEnterKey = useCallback((event: KeyboardEvent) => {
+    if (event.key === 'Enter') {
+        const form = formRef.current;
+        if (!form) return;
+
+        const activeElement = document.activeElement as HTMLElement;
+
+        if (activeElement.tagName === 'BUTTON' && activeElement.getAttribute('type') !== 'submit') {
+            event.preventDefault();
+            activeElement.click();
+            return;
+        }
+        
+        if (activeElement.tagName === 'TEXTAREA') {
+            return; // Allow new lines in textarea
+        }
+
+        event.preventDefault();
+
+        const focusable = Array.from(
+            form.querySelectorAll('input, button, textarea, select')
+        ).filter(el => !(el as HTMLElement).hasAttribute('disabled') && (el as HTMLElement).offsetParent !== null) as HTMLElement[];
+
+        const currentIndex = focusable.indexOf(activeElement);
+
+        if (currentIndex > -1 && currentIndex < focusable.length - 1) {
+            focusable[currentIndex + 1].focus();
+        } else {
+            const submitButton = form.querySelector('button[type="submit"]') as HTMLElement;
+            if (submitButton) {
+                submitButton.click();
+            }
+        }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+        document.addEventListener('keydown', handleEnterKey);
+    }
+    return () => {
+        document.removeEventListener('keydown', handleEnterKey);
+    };
+  }, [isOpen, handleEnterKey]);
+
   if (!isOpen) return null;
 
   return (
@@ -158,22 +234,23 @@ const ChoreFormModal: React.FC<ChoreFormModalProps> = ({ isOpen, onClose, onSave
         
         {error && <p className="bg-[var(--danger-bg-subtle)] text-[var(--danger)] p-3 rounded-lg mb-4 border border-[var(--danger-border)]">{error}</p>}
         
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
+          {!isBonusEdit && (
+            <div>
+              <label htmlFor="chore-name" className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Chore Name</label>
+              <input
+                id="chore-name"
+                ref={nameInputRef}
+                type="text"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="e.g., Make the bed"
+                className="w-full px-4 py-3 bg-[var(--bg-tertiary)] border-[var(--border-secondary)] border rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] transition-all placeholder:text-[var(--text-tertiary)]"
+              />
+            </div>
+          )}
           <div>
-            <label htmlFor="chore-name" className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Chore Name</label>
-            <input
-              id="chore-name"
-              ref={nameInputRef}
-              type="text"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="e.g., Make the bed"
-              disabled={isBonusEdit}
-              className="w-full px-4 py-3 bg-[var(--bg-tertiary)] border-[var(--border-secondary)] border rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] transition-all placeholder:text-[var(--text-tertiary)] disabled:opacity-70 disabled:cursor-not-allowed"
-            />
-          </div>
-          <div>
-            <label htmlFor="chore-value" className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Value</label>
+            <label htmlFor="chore-value" className="block text-sm font-medium text-[var(--text-secondary)] mb-2">{isBonusEdit ? 'Bonus Amount' : 'Value'}</label>
             <div className="flex items-center gap-2">
               <div className="flex rounded-lg bg-[var(--bg-tertiary)] p-1 self-stretch border border-[var(--border-secondary)]">
                 <button type="button" onClick={() => handleUnitChange('dollars')} className={`px-4 py-2 text-base font-semibold rounded-md transition-all ${valueUnit === 'dollars' ? 'bg-[var(--bg-secondary)] text-[var(--accent-primary)]' : 'text-[var(--text-secondary)]'}`}>$</button>
@@ -188,12 +265,13 @@ const ChoreFormModal: React.FC<ChoreFormModalProps> = ({ isOpen, onClose, onSave
                 step={valueUnit === 'dollars' ? '0.01' : '1'}
                 placeholder={valueUnit === 'dollars' ? '2.00' : '50'}
                 className="w-full px-4 py-3 bg-[var(--bg-tertiary)] border-[var(--border-secondary)] border rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] transition-all placeholder:text-[var(--text-tertiary)]"
+                ref={isBonusEdit ? nameInputRef : null}
               />
             </div>
           </div>
           {isBonusEdit ? (
              <div>
-                <label htmlFor="bonus-note" className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Note</label>
+                <label htmlFor="bonus-note" className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Reason (Optional)</label>
                 <textarea
                   id="bonus-note"
                   value={note}
@@ -217,30 +295,51 @@ const ChoreFormModal: React.FC<ChoreFormModalProps> = ({ isOpen, onClose, onSave
                 />
               </div>
               <div>
-                <span className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Repeat on Days</span>
-                 <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <button type="button" onClick={handleSelectAllDays} className="text-xs font-semibold px-2 py-1 rounded-md bg-[var(--bg-tertiary)] hover:opacity-80 border border-[var(--border-primary)]">Everyday</button>
-                    <button type="button" onClick={() => setDays([Day.Mon, Day.Tue, Day.Wed, Day.Thu, Day.Fri])} className="text-xs font-semibold px-2 py-1 rounded-md bg-[var(--bg-tertiary)] hover:opacity-80 border border-[var(--border-primary)]">Weekdays</button>
-                    <button type="button" onClick={() => setDays([Day.Sat, Day.Sun])} className="text-xs font-semibold px-2 py-1 rounded-md bg-[var(--bg-tertiary)] hover:opacity-80 border border-[var(--border-primary)]">Weekends</button>
-                    <button type="button" onClick={handleDeselectAllDays} className="text-xs font-semibold px-2 py-1 rounded-md bg-[var(--bg-tertiary)] hover:opacity-80 border border-[var(--border-primary)]">None</button>
-                </div>
-                <div className="grid grid-cols-7 gap-1 sm:gap-2">
-                  {DAYS_OF_WEEK.map(day => (
-                    <button
-                      key={day}
-                      type="button"
-                      onClick={() => handleDayToggle(day)}
-                      className={`py-2 rounded-lg font-bold transition-all duration-300 ${
-                        days.includes(day)
-                          ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)]'
-                          : 'bg-[var(--bg-tertiary)] hover:opacity-80 text-[var(--text-primary)] border border-[var(--border-secondary)]'
-                      }`}
-                    >
-                      {DAY_SHORT_NAMES[day]}
-                    </button>
-                  ))}
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Repeats</label>
+                <div className="flex rounded-lg bg-[var(--bg-tertiary)] p-1 self-stretch border border-[var(--border-secondary)]">
+                    <button type="button" onClick={() => setRepeatType('weekly')} className={`w-1/2 py-1.5 text-sm font-semibold rounded-md transition-all ${repeatType === 'weekly' ? 'bg-[var(--bg-secondary)] text-[var(--accent-primary)] shadow-sm' : 'text-[var(--text-secondary)]'}`}>Weekly</button>
+                    <button type="button" onClick={() => setRepeatType('oneTime')} className={`w-1/2 py-1.5 text-sm font-semibold rounded-md transition-all ${repeatType === 'oneTime' ? 'bg-[var(--bg-secondary)] text-[var(--accent-primary)] shadow-sm' : 'text-[var(--text-secondary)]'}`}>One-Time</button>
                 </div>
               </div>
+
+              {repeatType === 'weekly' ? (
+                <div className="animate-fade-in-fast">
+                  <span className="block text-sm font-medium text-[var(--text-secondary)] mb-2">On Days</span>
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <button type="button" onClick={handleSelectAllDays} className="text-xs font-semibold px-2 py-1 rounded-md bg-[var(--bg-tertiary)] hover:opacity-80 border border-[var(--border-primary)]">Everyday</button>
+                      <button type="button" onClick={() => setDays([Day.Mon, Day.Tue, Day.Wed, Day.Thu, Day.Fri])} className="text-xs font-semibold px-2 py-1 rounded-md bg-[var(--bg-tertiary)] hover:opacity-80 border border-[var(--border-primary)]">Weekdays</button>
+                      <button type="button" onClick={() => setDays([Day.Sat, Day.Sun])} className="text-xs font-semibold px-2 py-1 rounded-md bg-[var(--bg-tertiary)] hover:opacity-80 border border-[var(--border-primary)]">Weekends</button>
+                      <button type="button" onClick={handleDeselectAllDays} className="text-xs font-semibold px-2 py-1 rounded-md bg-[var(--bg-tertiary)] hover:opacity-80 border border-[var(--border-primary)]">None</button>
+                  </div>
+                  <div className="grid grid-cols-7 gap-1 sm:gap-2">
+                    {DAYS_OF_WEEK.map(day => (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() => handleDayToggle(day)}
+                        className={`py-2 rounded-lg font-bold transition-all duration-300 ${
+                          days.includes(day)
+                            ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)]'
+                            : 'bg-[var(--bg-tertiary)] hover:opacity-80 text-[var(--text-primary)] border border-[var(--border-secondary)]'
+                        }`}
+                      >
+                        {DAY_SHORT_NAMES[day]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="animate-fade-in-fast">
+                  <label htmlFor="one-time-date" className="block text-sm font-medium text-[var(--text-secondary)] mb-2">On Date</label>
+                  <input
+                    id="one-time-date"
+                    type="date"
+                    value={oneTimeDate}
+                    onChange={e => setOneTimeDate(e.target.value)}
+                    className="w-full px-4 py-3 bg-[var(--bg-tertiary)] border-[var(--border-secondary)] border rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] transition-all"
+                  />
+                </div>
+              )}
               
               <div>
                 <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Category</label>

@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useEffect } from 'react';
 import { PastChoreApproval } from '../types';
 import { CheckIcon, TrashIcon } from '../constants';
 
@@ -26,6 +27,29 @@ const PastChoresApprovalModal: React.FC<PastChoresApprovalModalProps> = ({
   onApproveAll,
   onDismissAll
 }) => {
+  // Close on Enter key press
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            // If there are approvals, the primary action is to approve all. Otherwise, just close.
+            if (approvals.length > 1) {
+                onApproveAll();
+            } else {
+                onClose();
+            }
+        }
+    };
+
+    if (isOpen) {
+        document.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose, onApproveAll, approvals]);
+
   if (!isOpen) return null;
 
   return (

@@ -1,28 +1,16 @@
 
+
+
 import React from 'react';
 import { PlusIcon, StarIcon } from '../constants';
-import useSound from '../hooks/useSound';
-import { BUTTON_CLICK_SOUND } from '../sounds';
 
 interface ActionBarProps {
   onAddChore: () => void;
   onPayBonus: () => void;
   pulseAddChore: boolean;
-  areSoundsEnabled: boolean;
 }
 
-const ActionBar: React.FC<ActionBarProps> = ({ onAddChore, onPayBonus, pulseAddChore, areSoundsEnabled }) => {
-  const playClickSound = useSound(BUTTON_CLICK_SOUND, areSoundsEnabled);
-
-  const handleAddChore = () => {
-    playClickSound();
-    onAddChore();
-  };
-
-  const handlePayBonus = () => {
-    playClickSound();
-    onPayBonus();
-  };
+const ActionBar: React.FC<ActionBarProps> = ({ onAddChore, onPayBonus, pulseAddChore }) => {
 
   return (
     <div
@@ -30,13 +18,13 @@ const ActionBar: React.FC<ActionBarProps> = ({ onAddChore, onPayBonus, pulseAddC
     >
         <div className="container mx-auto p-4 flex items-stretch gap-4">
           <button
-            onClick={handleAddChore}
+            onClick={onAddChore}
             className={`flex-1 flex items-center justify-center gap-2 bg-[var(--accent-primary)] hover:bg-[var(--accent-secondary)] text-[var(--accent-primary-text)] font-bold py-3 px-5 rounded-lg transform hover:-translate-y-px transition-all ${pulseAddChore ? 'animate-pulse-add-chore' : ''}`}
           >
             <PlusIcon /><span>Add Chore</span>
           </button>
           <button
-            onClick={handlePayBonus}
+            onClick={onPayBonus}
             className="flex-1 flex items-center justify-center gap-2 text-white font-bold py-3 px-5 rounded-lg transform hover:-translate-y-px transition-all animate-pulse-bonus"
           >
             <StarIcon className="h-6 w-6" />
@@ -53,7 +41,7 @@ const ActionBar: React.FC<ActionBarProps> = ({ onAddChore, onPayBonus, pulseAddC
             top: -1.5rem; /* Start the effect 1.5rem (24px) above the bar */
             z-index: -1;
             /* A subtle background tint from the theme's primary color for better visual separation and a glassmorphism effect. */
-            background: rgba(var(--bg-primary-values-rgb, 241, 245, 249), 0.65);
+            background: rgba(var(--bg-primary-values-rgb, 241, 245, 249), 0.6);
             /* The blur effect for the area behind the bar. */
             -webkit-backdrop-filter: blur(12px);
             backdrop-filter: blur(12px);

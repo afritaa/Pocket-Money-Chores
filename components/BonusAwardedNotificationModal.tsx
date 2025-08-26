@@ -1,27 +1,56 @@
 
-import React, { useMemo, useEffect } from 'react';
-import useSound from '../hooks/useSound';
-import { BONUS_NOTIFY_SOUND } from '../sounds';
+
+import React, { useMemo, useEffect, useState, useCallback } from 'react';
+import { BonusNotification } from '../types';
 
 interface BonusAwardedNotificationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  bonus: {
-    amount: number;
-    note?: string;
-  };
-  areSoundsEnabled: boolean;
+  bonus: BonusNotification;
+  onAcknowledge: (bonus: BonusNotification) => void;
 }
 
-const BonusAwardedNotificationModal: React.FC<BonusAwardedNotificationModalProps> = ({ isOpen, onClose, bonus, areSoundsEnabled }) => {
+const BonusAwardedNotificationModal: React.FC<BonusAwardedNotificationModalProps> = ({ isOpen, onClose, bonus, onAcknowledge }) => {
   const { amount, note } = bonus;
-  const playBonusSound = useSound(BONUS_NOTIFY_SOUND, areSoundsEnabled);
+  
+  const [isButtonVisible, setIsButtonVisible] = useState(false);
+  const [buttonText, setButtonText] = useState("Yesss!!!!");
 
   useEffect(() => {
     if (isOpen) {
-      playBonusSound();
+      setIsButtonVisible(false); // Reset on open
+      const texts = ["Yesss!!!!", "Woohoo!", "Cha-Ching!!", "Excellent!! 🎸"];
+      setButtonText(texts[Math.floor(Math.random() * texts.length)]);
+      
+      const timer = setTimeout(() => {
+        setIsButtonVisible(true);
+      }, 5000);
+
+      return () => clearTimeout(timer);
     }
-  }, [isOpen, playBonusSound]);
+  }, [isOpen]);
+
+  const handleConfirm = useCallback(() => {
+    onAcknowledge(bonus);
+    onClose();
+  }, [bonus, onAcknowledge, onClose]);
+
+  useEffect(() => {
+      const handleKeyDown = (event: KeyboardEvent) => {
+          if (event.key === 'Enter') {
+              event.preventDefault();
+              if (isButtonVisible) {
+                handleConfirm();
+              }
+          }
+      };
+      if (isOpen) {
+          document.addEventListener('keydown', handleKeyDown);
+      }
+      return () => {
+          document.removeEventListener('keydown', handleKeyDown);
+      };
+  }, [isOpen, isButtonVisible, handleConfirm]);
 
   const coinParticles = useMemo(() => {
     if (!isOpen) return [];
@@ -39,14 +68,11 @@ const BonusAwardedNotificationModal: React.FC<BonusAwardedNotificationModalProps
     if (note?.trim()) {
       let processedNote = note.trim();
       
-      // Gracefully handle "for" prefix, e.g., "for cleaning" or "For cleaning"
       if (processedNote.toLowerCase().startsWith('for ')) {
         processedNote = processedNote.substring(4).trim();
       }
       
-      // Only add the note if there's content left after processing
       if (processedNote) {
-          // Ensure the first letter is lowercase
           processedNote = processedNote.charAt(0).toLowerCase() + processedNote.slice(1);
           const noteText = `for ${processedNote}`;
 
@@ -57,7 +83,6 @@ const BonusAwardedNotificationModal: React.FC<BonusAwardedNotificationModalProps
           );
       }
     }
-    // Fallback message if note is empty or just "for"
     return `You've earned an extra ${formattedAmount}!`;
   }, [amount, note]);
 
@@ -87,15 +112,19 @@ const BonusAwardedNotificationModal: React.FC<BonusAwardedNotificationModalProps
             </div>
         </div>
         <h2 className="text-3xl font-bold mb-4 text-white drop-shadow-lg">You've been awarded a bonus!</h2>
-        <p className="text-lg text-white/90 mb-8 drop-shadow-md">
+        <p className="text-lg text-white/90 mb-8 drop-shadow-md min-h-[72px]">
           {message}
         </p>
-        <button
-          onClick={onClose}
-          className="w-full px-6 py-3 rounded-lg text-amber-800 bg-yellow-300 hover:bg-yellow-200 font-extrabold text-xl tracking-wider shadow-lg hover:shadow-xl transform hover:-translate-y-px transition-all border-2 border-yellow-200"
-        >
-          Yesss!!!!
-        </button>
+        <div className="h-[62px]">
+            {isButtonVisible && (
+              <button
+                onClick={handleConfirm}
+                className="w-full px-6 py-3 rounded-lg text-amber-800 bg-yellow-300 hover:bg-yellow-200 font-extrabold text-xl tracking-wider shadow-lg hover:shadow-xl transform hover:-translate-y-px transition-all border-2 border-yellow-200 animate-fade-in"
+              >
+                {buttonText}
+              </button>
+            )}
+        </div>
       </div>
       <style>
         {`
@@ -148,6 +177,9 @@ const BonusAwardedNotificationModal: React.FC<BonusAwardedNotificationModalProps
           .dollar-sign.style-1 { left: 50%; top: 50%; transform: translate(-50%, -50%); animation-delay: 0s; font-size: 3rem; }
           .dollar-sign.style-2 { left: 20%; top: 40%; animation-delay: 0.6s; }
           .dollar-sign.style-3 { left: 80%; top: 60%; transform: translateX(-80%); animation-delay: 1.2s; }
+          
+          @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+          .animate-fade-in { animation: fade-in 0.5s ease-out forwards; }
         `}
       </style>
     </div>

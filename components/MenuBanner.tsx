@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Profile } from '../types';
-import { MenuIcon, UserCircleIcon, PencilIcon, PaintBrushIcon, SettingsIcon, ExclamationIcon } from '../constants';
+import { MenuIcon, UserCircleIcon, PencilIcon, ImageIcon, SettingsIcon, ExclamationIcon, LockClosedIcon, PlusIcon } from '../constants';
 
 interface MenuBannerProps {
   isKidsMode: boolean;
@@ -40,7 +40,9 @@ const MenuBanner: React.FC<MenuBannerProps> = ({
   const [messageIndex, setMessageIndex] = useState(0);
 
   const bannerClasses = `
-    relative h-16 w-full flex items-center justify-between z-40 mb-4
+    h-16 w-full flex items-center justify-between z-40
+    px-4 sm:px-6 glass-header-container
+    md:relative md:mb-4 md:px-0 md:bg-transparent md:backdrop-blur-none
   `;
 
   useEffect(() => {
@@ -97,135 +99,183 @@ const MenuBanner: React.FC<MenuBannerProps> = ({
   }, [messagesToShow.length]);
 
   const currentMessage = messagesToShow[messageIndex % messagesToShow.length] || "Earning Mode 💰";
+  const otherProfiles = profiles.filter(p => p.id !== activeProfileId);
 
   return (
     <div className={bannerClasses}>
        {/* LEFT GROUP */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 md:gap-4 min-w-0">
         <div className="relative" ref={menuRef}>
           <div className={`absolute -inset-1.5 rounded-lg ${menuPulse ? 'animate-pulse-strong' : ''}`} aria-hidden="true" />
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="relative z-10 p-2 rounded-lg text-[var(--text-primary)] hover:bg-white/20 transition-colors"
+            className="relative z-10 p-1 md:p-2 rounded-lg text-[var(--text-primary)] hover:bg-white/20 transition-colors"
             aria-label="Open menu"
           >
-            <MenuIcon className="h-8 w-8" />
+            <MenuIcon className="h-7 w-7 md:h-8 w-8" />
           </button>
           {isMenuOpen && (
-            <div className="absolute top-full left-0 mt-2 w-72 rounded-lg py-1 z-50 bg-[var(--bg-secondary)] border border-[var(--border-primary)] animate-fade-in-fast">
-              <div className="py-1">
-                  {profiles.map(p => (
-                      <div key={p.id} className={`flex items-center justify-between pr-2 transition-colors ${isKidsMode && activeProfileId === p.id ? 'bg-[var(--bg-tertiary)]' : ''} hover:bg-[var(--bg-tertiary)]`}>
-                          <button onClick={() => { onSwitchToChild(p.id); setIsMenuOpen(false); }} className={`flex-grow text-left px-4 py-2 text-sm flex items-center gap-3 ${isKidsMode && activeProfileId === p.id ? 'font-bold text-[var(--accent-primary)]' : 'text-[var(--text-primary)]'}`}>
-                              {p.image ? <img src={p.image} alt={p.name} className="w-6 h-6 rounded-full object-cover" /> : <UserCircleIcon className="w-6 h-6" />}
-                              <span>{p.name}'s Chores</span>
-                          </button>
-                          {!isKidsMode && (
-                              <button onClick={() => { onEditProfile(p); setIsMenuOpen(false); }} className="flex-shrink-0 p-2 rounded-full text-[var(--text-secondary)] hover:text-[var(--accent-primary)]" aria-label={`Edit ${p.name}'s profile`}>
-                                  <PencilIcon />
-                              </button>
+            <div className={`absolute top-full left-0 mt-2 ${isKidsMode ? 'w-52' : 'w-72'} rounded-lg py-1 z-50 bg-[var(--bg-secondary)] border border-[var(--border-primary)] shadow-lg animate-fade-in-fast`}>
+              {isKidsMode ? (
+                  <div className="flex flex-col gap-1 p-1">
+                    {otherProfiles.map(p => (
+                        <button
+                          key={p.id}
+                          onClick={() => { onSwitchToChild(p.id); setIsMenuOpen(false); }}
+                          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors text-left"
+                          aria-label={`Switch to ${p.name}'s Chores`}
+                        >
+                          {p.image ? (
+                            <img src={p.image} alt={p.name} className="w-8 h-8 rounded-full object-cover" />
+                          ) : (
+                            <UserCircleIcon className="w-8 h-8" />
                           )}
-                      </div>
-                  ))}
-              </div>
-               {!isKidsMode && (
-                <div className="py-1 border-t border-[var(--border-primary)]">
-                   <button onClick={() => { onShowAddChildModal(); setIsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]">
-                      + Add Child
-                  </button>
-                </div>
-              )}
-              <div className="py-1 border-t border-[var(--border-primary)]">
-                  <button onClick={() => { onAttemptSwitchToParentMode(); setIsMenuOpen(false); }} className={`w-full text-left px-4 py-2 text-sm transition-colors ${!isKidsMode ? 'font-bold text-[var(--accent-primary)] bg-[var(--bg-tertiary)]' : 'text-[var(--text-primary)]'} hover:bg-[var(--bg-tertiary)]`}>
-                      Parent Mode
-                  </button>
-              </div>
-               {isKidsMode && (
-                <div className="py-1 border-t border-[var(--border-primary)]">
-                  <button onClick={() => { onShowThemeModal(); setIsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] flex items-center gap-3">
-                      <PaintBrushIcon className="w-5 h-5 text-[var(--text-secondary)]" />
-                      <span>Change Theme</span>
-                  </button>
-                </div>
+                          <span className="font-semibold text-sm">{p.name}'s Chores</span>
+                        </button>
+                    ))}
+
+                    {otherProfiles.length > 0 && (
+                      <div className="w-full h-px bg-[var(--border-primary)] my-1" />
+                    )}
+
+                    <button
+                      onClick={() => { onShowThemeModal(); setIsMenuOpen(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors text-left"
+                      aria-label="Change Theme"
+                    >
+                      <ImageIcon className="w-6 h-6 text-[var(--text-secondary)]" />
+                      <span className="font-semibold text-sm">Change Theme</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => { onAttemptSwitchToParentMode(); setIsMenuOpen(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors text-left"
+                      aria-label="Parent Zone"
+                    >
+                      <LockClosedIcon className="w-6 h-6 text-[var(--text-secondary)]" />
+                      <span className="font-semibold text-sm">Parent Zone</span>
+                    </button>
+                  </div>
+              ) : (
+                  <>
+                      {profiles.length > 0 && (
+                          <>
+                              <div className="px-4 pt-2 pb-1 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Switch to Child</div>
+                              {profiles.map(p => (
+                                  <div key={p.id} className="flex items-center justify-between pr-2 hover:bg-[var(--bg-tertiary)] rounded-lg mx-1">
+                                    <button onClick={() => { onSwitchToChild(p.id); setIsMenuOpen(false); }} className="flex-grow text-left px-3 py-2 flex items-center gap-3 rounded-lg transition-colors">
+                                        {p.image ? (
+                                            <img src={p.image} alt={p.name} className="w-8 h-8 rounded-full object-cover" />
+                                        ) : (
+                                            <UserCircleIcon className="w-8 h-8" />
+                                        )}
+                                        <span className="font-semibold">{p.name}</span>
+                                    </button>
+                                    <button onClick={() => { onEditProfile(p); setIsMenuOpen(false); }} className="p-2 rounded-lg hover:bg-[var(--bg-secondary)]" aria-label={`Edit ${p.name}'s profile`}>
+                                        <PencilIcon className="w-5 h-5 text-[var(--text-secondary)]" />
+                                    </button>
+                                  </div>
+                              ))}
+                          </>
+                      )}
+                      <div className="w-full h-px bg-[var(--border-primary)] my-1" />
+                      <button
+                          onClick={() => { onShowAddChildModal(); setIsMenuOpen(false); }}
+                          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors text-left"
+                          aria-label="Add Child"
+                      >
+                          <PlusIcon className="w-6 h-6 text-[var(--text-secondary)]" />
+                          <span className="font-semibold">Add Child</span>
+                      </button>
+                  </>
               )}
             </div>
           )}
         </div>
-        <h1 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)] truncate">
-          {isKidsMode
-            ? (activeProfile?.name ? `${activeProfile.name}'s Pocket Money Chores.` : 'Pocket Money Chores.')
-            : 'Pocket Money Chores.'}
+        <h1 className="text-lg md:text-xl font-bold text-[var(--text-primary)] whitespace-nowrap truncate">
+          {isKidsMode ? `${activeProfile?.name || ''}'s Pocket Money Chores.` : 'Pocket Money Chores.'}
         </h1>
       </div>
-      
-       {/* CENTER GROUP (KIDS MODE) - This is now handled on the left */}
+
+      {/* CENTER MESSAGE (Parent mode only for spacing) */}
+      {!isKidsMode && (
+          <div key={currentMessage} className={`text-center text-sm font-bold text-[var(--text-secondary)] hidden md:block animate-fade-in-fast whitespace-nowrap opacity-0`}>
+              {currentMessage}
+          </div>
+      )}
 
       {/* RIGHT GROUP */}
       <div className="flex items-center gap-2 sm:gap-4">
-        {!isKidsMode && pendingCount > 0 && (
-           <button onClick={onShowPending} className="relative flex items-center gap-2 font-bold text-[var(--warning-text)] bg-[var(--warning)] py-2 px-3 sm:px-4 rounded-lg transform hover:-translate-y-px transition-all animate-fade-in text-sm sm:text-base">
-            <span>Pending</span>
-            <span className="hidden sm:inline">Cash Outs</span>
-            <span className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--danger)] text-xs font-bold text-[var(--danger-text)] ring-2 ring-[var(--warning)] animate-pulse">
+        {isKidsMode && (
+          <div key={currentMessage} className={`text-sm font-bold text-[var(--text-secondary)] hidden md:block animate-fade-in-fast whitespace-nowrap`}>
+            {currentMessage}
+          </div>
+        )}
+        {pastApprovalsCount > 0 && !isKidsMode && (
+          <button onClick={onShowPastApprovals} className="relative p-2 rounded-lg text-[var(--text-primary)] hover:bg-white/20 transition-colors animate-pulse-attention">
+            <ExclamationIcon className="h-7 w-7 text-[var(--warning)]" />
+            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--danger)] text-xs font-bold text-white">
+              {pastApprovalsCount}
+            </span>
+          </button>
+        )}
+        {pendingCount > 0 && !isKidsMode && (
+          <button onClick={onShowPending} className="relative p-2 rounded-lg text-[var(--text-primary)] hover:bg-white/20 transition-colors">
+            <span className="font-bold text-2xl text-[var(--success)]">$</span>
+            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--danger)] text-xs font-bold text-white">
               {pendingCount}
             </span>
           </button>
         )}
-         {!isKidsMode && pastApprovalsCount > 0 && (
-            <button 
-                onClick={onShowPastApprovals} 
-                className="relative flex items-center justify-center p-2 rounded-full transition-all duration-300 bg-[var(--warning)] text-[var(--warning-text)] animate-pulse"
-                aria-label={`${pastApprovalsCount} past chores to approve`}
-            >
-                <ExclamationIcon className="h-6 w-6" />
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--danger)] text-xs font-bold text-white ring-2 ring-[var(--bg-secondary)]">
-                    {pastApprovalsCount}
-                </span>
-            </button>
-        )}
+
         {!isKidsMode && (
-           <div className="relative" ref={settingsMenuRef}>
-              <button onClick={() => setIsSettingsMenuOpen(prev => !prev)} className="relative p-2 rounded-full text-[var(--text-primary)] hover:bg-white/20 transition-colors">
-                  <SettingsIcon className="h-7 w-7" />
+            <div className="relative" ref={settingsMenuRef}>
+              <button
+                onClick={() => setIsSettingsMenuOpen(!isSettingsMenuOpen)}
+                className="p-2 rounded-lg text-[var(--text-primary)] hover:bg-white/20 transition-colors"
+                aria-label="Open settings"
+              >
+                <SettingsIcon className="h-7 w-7" />
               </button>
               {isSettingsMenuOpen && (
-                  <div className="absolute top-full right-0 mt-2 w-60 rounded-lg py-1 z-50 bg-[var(--bg-secondary)] border border-[var(--border-primary)] animate-fade-in-fast">
-                      <button onClick={() => { onShowOptionsModal(); setIsSettingsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] flex items-center gap-3">
-                          <SettingsIcon className="w-5 h-5 text-[var(--text-secondary)]" />
-                          <span>Options</span>
-                      </button>
-                      <button onClick={() => { onShowThemeModal(); setIsSettingsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] flex items-center gap-3">
-                          <PaintBrushIcon className="w-5 h-5 text-[var(--text-secondary)]" />
-                          <span>Change Theme</span>
-                      </button>
-                  </div>
+                <div className="absolute top-full right-0 mt-2 w-56 rounded-lg py-1 z-50 bg-[var(--bg-secondary)] border border-[var(--border-primary)] shadow-lg animate-fade-in-fast">
+                  <button
+                    onClick={() => { onShowOptionsModal(); setIsSettingsMenuOpen(false); }}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors text-left"
+                  >
+                    <SettingsIcon className="w-6 h-6 text-[var(--text-secondary)]" />
+                    <span className="font-semibold">Settings</span>
+                  </button>
+                  <button
+                    onClick={() => { onShowThemeModal(); setIsSettingsMenuOpen(false); }}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors text-left"
+                  >
+                    <ImageIcon className="w-6 h-6 text-[var(--text-secondary)]" />
+                    <span className="font-semibold">Change Theme</span>
+                  </button>
+                </div>
               )}
-          </div>
-        )}
-        {isKidsMode && (
-          <div key={currentMessage} className="font-semibold text-sm sm:text-base hidden sm:inline animate-fade-in text-[var(--warning)]">
-            {currentMessage}
-          </div>
+            </div>
         )}
       </div>
 
-       <style>{`
-        @keyframes fade-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-        @keyframes fade-in-fast { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in { animation: fade-in 0.5s ease-out forwards; }
-        .animate-fade-in-fast { animation: fade-in-fast 0.2s ease-out forwards; }
-
-        @keyframes pulse-strong {
-          0%, 100% {
-            background-color: transparent;
+      <style>{`
+          @keyframes fade-in-fast { from { opacity: 0; } to { opacity: 1; } }
+          .animate-fade-in-fast { animation: fade-in-fast 0.2s ease-out forwards; }
+          
+          @keyframes pulse-strong {
+              0% { box-shadow: 0 0 0 0 rgba(var(--accent-primary-values), 0.7); }
+              70% { box-shadow: 0 0 0 10px rgba(var(--accent-primary-values), 0); }
+              100% { box-shadow: 0 0 0 0 rgba(var(--accent-primary-values), 0); }
           }
-          50% {
-            background-color: rgba(var(--accent-primary-values), 0.2);
+          .animate-pulse-strong { animation: pulse-strong 1.5s infinite; }
+          
+          @keyframes pulse-attention {
+              0% { transform: scale(1); }
+              50% { transform: scale(1.1); }
+              100% { transform: scale(1); }
           }
-        }
-        .animate-pulse-strong {
-            animation: pulse-strong 2s infinite;
-        }
+          .animate-pulse-attention { animation: pulse-attention 2s infinite ease-in-out; }
       `}</style>
     </div>
   );

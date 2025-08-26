@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { EarningsRecord, CompletionSnapshot } from '../types';
 
 interface ReviewCashOutModalProps {
@@ -39,14 +39,29 @@ const ReviewCashOutModal: React.FC<ReviewCashOutModalProps> = ({ isOpen, onClose
     });
   };
 
-  const handleApprove = () => {
+  const handleApprove = useCallback(() => {
     const finalRecord: EarningsRecord = {
       ...record,
       amount: newTotal,
       completionsSnapshot: completions.filter(c => c.isCompleted), // Store only what was actually approved
     };
     onApprove(finalRecord);
-  };
+  }, [record, newTotal, completions, onApprove]);
+
+  useEffect(() => {
+      const handleKeyDown = (event: KeyboardEvent) => {
+          if (event.key === 'Enter') {
+              event.preventDefault();
+              handleApprove();
+          }
+      };
+      if (isOpen) {
+          document.addEventListener('keydown', handleKeyDown);
+      }
+      return () => {
+          document.removeEventListener('keydown', handleKeyDown);
+      };
+  }, [isOpen, handleApprove]);
 
   if (!isOpen) return null;
 

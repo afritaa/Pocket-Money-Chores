@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Profile } from '../types';
-import { BonusCoinIcon, UserCircleIcon } from '../constants';
+import { StarIcon, UserCircleIcon } from '../constants';
 
 interface BonusAwardModalProps {
   isOpen: boolean;
@@ -17,6 +17,7 @@ const BonusAwardModal: React.FC<BonusAwardModalProps> = ({ isOpen, onClose, onAw
   const [amountUnit, setAmountUnit] = useState<'cents' | 'dollars'>('cents');
   const [note, setNote] = useState('');
   const [error, setError] = useState('');
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -68,8 +69,8 @@ const BonusAwardModal: React.FC<BonusAwardModalProps> = ({ isOpen, onClose, onAw
     setAmountUnit(newUnit);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = useCallback((e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setError('');
 
     if (selectedProfileIds.length === 0) {
@@ -90,7 +91,46 @@ const BonusAwardModal: React.FC<BonusAwardModalProps> = ({ isOpen, onClose, onAw
     }
 
     onAward(selectedProfileIds, bonusAmountInCents, note.trim());
-  };
+  }, [selectedProfileIds, amount, amountUnit, note, onAward]);
+
+  const handleEnterKey = useCallback((event: KeyboardEvent) => {
+    if (event.key === 'Enter') {
+        const form = formRef.current;
+        if (!form) return;
+
+        const activeElement = document.activeElement as HTMLElement;
+
+        if (activeElement.tagName === 'BUTTON' && activeElement.getAttribute('type') !== 'submit') {
+            event.preventDefault();
+            activeElement.click();
+            return;
+        }
+
+        event.preventDefault();
+
+        const focusable = Array.from(
+            form.querySelectorAll('input, button, textarea')
+        ).filter(el => !(el as HTMLElement).hasAttribute('disabled') && (el as HTMLElement).offsetParent !== null) as HTMLElement[];
+
+        const currentIndex = focusable.indexOf(activeElement);
+
+        if (currentIndex > -1 && currentIndex < focusable.length - 1) {
+            focusable[currentIndex + 1].focus();
+        } else {
+            handleSubmit();
+        }
+    }
+  }, [handleSubmit]);
+
+  useEffect(() => {
+    if (isOpen) {
+        document.addEventListener('keydown', handleEnterKey);
+    }
+    return () => {
+        document.removeEventListener('keydown', handleEnterKey);
+    };
+  }, [isOpen, handleEnterKey]);
+
 
   if (!isOpen) return null;
 
@@ -104,7 +144,7 @@ const BonusAwardModal: React.FC<BonusAwardModalProps> = ({ isOpen, onClose, onAw
         onClick={e => e.stopPropagation()}
       >
         <div className="text-center mb-6">
-            <BonusCoinIcon className="h-12 w-12 text-yellow-400 mx-auto mb-2" />
+            <StarIcon className="h-12 w-12 text-yellow-400 mx-auto mb-2" />
             <h2 className="text-2xl font-bold">
               {profiles.length === 1 ? `Award a Bonus to ${profiles[0].name}!` : 'Award a Bonus!'}
             </h2>
@@ -112,7 +152,7 @@ const BonusAwardModal: React.FC<BonusAwardModalProps> = ({ isOpen, onClose, onAw
         
         {error && <p className="bg-[var(--danger-bg-subtle)] text-[var(--danger)] p-3 rounded-lg mb-4 border border-[var(--danger-border)]">{error}</p>}
         
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
           {profiles.length > 1 && (
             <div>
               <div className="flex justify-between items-center mb-2">

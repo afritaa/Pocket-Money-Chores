@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useCallback } from 'react';
 
 interface ForgotPasscodeModalProps {
   isOpen: boolean;
@@ -66,8 +67,8 @@ const ForgotPasscodeModal: React.FC<ForgotPasscodeModalProps> = ({ isOpen, onClo
     }
   }, [isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = useCallback((e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (selectedAnswer === null) {
       setError('Please select an answer.');
       return;
@@ -86,7 +87,24 @@ const ForgotPasscodeModal: React.FC<ForgotPasscodeModalProps> = ({ isOpen, onClo
       }
       setIsLoading(false);
     }, 500);
-  };
+  }, [selectedAnswer, question, onSuccess]);
+
+  useEffect(() => {
+      const handleKeyDown = (event: KeyboardEvent) => {
+          if (event.key === 'Enter') {
+              event.preventDefault();
+              handleSubmit();
+          }
+      };
+
+      if (isOpen) {
+          document.addEventListener('keydown', handleKeyDown);
+      }
+
+      return () => {
+          document.removeEventListener('keydown', handleKeyDown);
+      };
+  }, [isOpen, handleSubmit]);
 
   if (!isOpen || !question) return null;
 

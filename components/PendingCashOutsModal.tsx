@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { EarningsRecord } from '../types';
 
 interface PendingCashOutsModalProps {
@@ -15,6 +15,24 @@ const PendingCashOutsModal: React.FC<PendingCashOutsModalProps> = ({
   pendingCashOuts,
   onOpenReview,
 }) => {
+  // Close on Enter key press
+  useEffect(() => {
+      const handleKeyDown = (event: KeyboardEvent) => {
+          if (event.key === 'Enter') {
+              event.preventDefault();
+              onClose();
+          }
+      };
+
+      if (isOpen) {
+          document.addEventListener('keydown', handleKeyDown);
+      }
+
+      return () => {
+          document.removeEventListener('keydown', handleKeyDown);
+      };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (

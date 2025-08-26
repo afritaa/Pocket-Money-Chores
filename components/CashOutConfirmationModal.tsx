@@ -1,23 +1,31 @@
 
+
 import React, { useMemo, useEffect } from 'react';
-import useSound from '../hooks/useSound';
-import { CASH_OUT_SOUND } from '../sounds';
 
 interface CashOutConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
   amount: number;
-  areSoundsEnabled: boolean;
 }
 
-const CashOutConfirmationModal: React.FC<CashOutConfirmationModalProps> = ({ isOpen, onClose, amount, areSoundsEnabled }) => {
-  const playCashOutSound = useSound(CASH_OUT_SOUND, areSoundsEnabled);
-
+const CashOutConfirmationModal: React.FC<CashOutConfirmationModalProps> = ({ isOpen, onClose, amount }) => {
+  // Close on Enter key press
   useEffect(() => {
-    if (isOpen) {
-      playCashOutSound();
-    }
-  }, [isOpen, playCashOutSound]);
+      const handleKeyDown = (event: KeyboardEvent) => {
+          if (event.key === 'Enter') {
+              event.preventDefault();
+              onClose();
+          }
+      };
+
+      if (isOpen) {
+          document.addEventListener('keydown', handleKeyDown);
+      }
+
+      return () => {
+          document.removeEventListener('keydown', handleKeyDown);
+      };
+  }, [isOpen, onClose]);
 
   const confettiPieces = useMemo(() => {
     if (!isOpen) return [];

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useCallback } from 'react';
 import { LockClosedIcon } from '../constants';
 
 interface PasscodeEntryModalProps {
@@ -13,6 +14,16 @@ const PasscodeEntryModal: React.FC<PasscodeEntryModalProps> = ({ isOpen, onClose
   const [passcode, setPasscode] = useState('');
   const [error, setError] = useState('');
 
+  const handleSubmit = useCallback((e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (passcode === passcodeToMatch) {
+      onSuccess();
+    } else {
+      setError('Incorrect passcode. Please try again.');
+      setPasscode('');
+    }
+  }, [passcode, passcodeToMatch, onSuccess]);
+
   useEffect(() => {
     if (isOpen) {
       setPasscode('');
@@ -20,15 +31,20 @@ const PasscodeEntryModal: React.FC<PasscodeEntryModalProps> = ({ isOpen, onClose
     }
   }, [isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (passcode === passcodeToMatch) {
-      onSuccess();
-    } else {
-      setError('Incorrect passcode. Please try again.');
-      setPasscode('');
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            handleSubmit();
+        }
+    };
+    if (isOpen) {
+        document.addEventListener('keydown', handleKeyDown);
     }
-  };
+    return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, handleSubmit]);
 
   if (!isOpen) return null;
 

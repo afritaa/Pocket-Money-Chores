@@ -1,7 +1,6 @@
 
 
-
-import React from 'react';
+import React, { useEffect } from 'react';
 
 interface ThemeModalProps {
   isOpen: boolean;
@@ -20,9 +19,31 @@ const themes = [
   { id: 'beach', name: 'Beach', colors: { bg: 'linear-gradient(to bottom, #fefae0, #e0f7fa)', card: '#ffffff', accent: '#fb8500', text: '#023047' } },
   { id: 'princess', name: 'Princess Pink', colors: { bg: 'linear-gradient(135deg, #fce4ec, #f8eaf2)', card: '#fff', accent: '#ff4081', text: '#4a148c' } },
   { id: 'lions', name: 'Brisbane Lions', colors: { bg: 'linear-gradient(135deg, #6A0032, #A30D45)', card: '#8E2A50', accent: '#00A2E8', text: '#FFD700' } },
+  { id: 'superhero', name: 'Superhero', colors: { bg: '#101828', card: '#1e293b', accent: '#ef4444', text: '#f8fafc' } },
+  { id: 'jungle', name: 'Jungle', colors: { bg: '#14532d', card: '#166534', accent: '#f97316', text: '#f0fdf4' } },
+  { id: 'galaxy', name: 'Galaxy', colors: { bg: '#2b0b3f', card: '#4c1d95', accent: '#ec4899', text: '#f3e8ff' } },
+  { id: 'gaming', name: 'Gaming', colors: { bg: '#0a0a0a', card: '#1a1a1a', accent: '#ff00ff', text: '#39ff14' } },
 ];
 
 const ThemeModal: React.FC<ThemeModalProps> = ({ isOpen, onClose, onSave, currentTheme, isFirstTime }) => {
+  // Close on Enter key press
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            onClose();
+        }
+    };
+
+    if (isOpen) {
+        document.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleSelectTheme = (themeId: string) => {
@@ -46,12 +67,12 @@ const ThemeModal: React.FC<ThemeModalProps> = ({ isOpen, onClose, onSave, curren
         )}
         
         <div className="flex-grow overflow-y-auto custom-scrollbar -mr-3 pr-3">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
               {themes.map(theme => (
                 <div key={theme.id} className="text-center">
                   <button
                     onClick={() => handleSelectTheme(theme.id)}
-                    className={`w-full h-28 rounded-lg border-4 transition-all duration-300 ${currentTheme === theme.id ? 'border-[var(--accent-primary)] ring-2 ring-offset-2 ring-offset-[var(--bg-secondary)] ring-[var(--accent-primary)]' : 'border-transparent hover:border-[var(--text-secondary)]'}`}
+                    className={`w-full h-24 rounded-lg border-4 transition-all duration-300 ${currentTheme === theme.id ? 'border-[var(--accent-primary)] ring-2 ring-offset-2 ring-offset-[var(--bg-secondary)] ring-[var(--accent-primary)]' : 'border-transparent hover:border-[var(--text-secondary)]'}`}
                     style={{ background: theme.colors.bg }}
                     aria-label={`Select ${theme.name} theme`}
                   >

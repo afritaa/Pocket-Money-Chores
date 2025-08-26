@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+
+
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { LockClosedIcon } from '../constants';
+import { useSound } from '../hooks/useSound';
 
 interface PasscodeSetupModalProps {
   isOpen: boolean;
@@ -11,9 +14,11 @@ const PasscodeSetupModal: React.FC<PasscodeSetupModalProps> = ({ isOpen, onClose
   const [passcode, setPasscode] = useState('');
   const [confirmPasscode, setConfirmPasscode] = useState('');
   const [error, setError] = useState('');
+  const formRef = useRef<HTMLFormElement>(null);
+  const { playButtonClick } = useSound();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = useCallback((e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setError('');
 
     if (!/^\d{4}$/.test(passcode)) {
@@ -24,8 +29,39 @@ const PasscodeSetupModal: React.FC<PasscodeSetupModalProps> = ({ isOpen, onClose
       setError('Passcodes do not match.');
       return;
     }
+    playButtonClick();
     onSave(passcode);
-  };
+  }, [passcode, confirmPasscode, onSave, playButtonClick]);
+
+  const handleEnterKey = useCallback((event: KeyboardEvent) => {
+    if (event.key === 'Enter') {
+        const form = formRef.current;
+        if (!form) return;
+        event.preventDefault();
+
+        const focusable = Array.from(
+            form.querySelectorAll('input, button')
+        ).filter(el => !(el as HTMLElement).hasAttribute('disabled')) as HTMLElement[];
+        
+        const activeElement = document.activeElement as HTMLElement;
+        const currentIndex = focusable.indexOf(activeElement);
+
+        if (currentIndex > -1 && currentIndex < focusable.length - 1) {
+            focusable[currentIndex + 1].focus();
+        } else {
+            handleSubmit();
+        }
+    }
+  }, [handleSubmit]);
+
+  useEffect(() => {
+    if (isOpen) {
+        document.addEventListener('keydown', handleEnterKey);
+    }
+    return () => {
+        document.removeEventListener('keydown', handleEnterKey);
+    };
+  }, [isOpen, handleEnterKey]);
 
   if (!isOpen) return null;
 
@@ -46,7 +82,7 @@ const PasscodeSetupModal: React.FC<PasscodeSetupModalProps> = ({ isOpen, onClose
         
         {error && <p className="bg-[var(--danger-bg-subtle)] text-[var(--danger)] p-3 rounded-lg mb-4 border border-[var(--danger-border)]">{error}</p>}
         
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="passcode" className="sr-only">New Passcode</label>
             <input
@@ -57,7 +93,8 @@ const PasscodeSetupModal: React.FC<PasscodeSetupModalProps> = ({ isOpen, onClose
               value={passcode}
               onChange={e => setPasscode(e.target.value.replace(/\D/g, ''))}
               placeholder="••••"
-              className="w-full px-4 py-3 text-center tracking-[1em] text-lg bg-[var(--bg-tertiary)] border-[var(--border-secondary)] border rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] transition-all"
+              autoFocus
+              className="w-full px-4 py-3 text-center tracking-[1em] text-2xl bg-[var(--bg-tertiary)] border-[var(--border-secondary)] border rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] transition-all"
             />
           </div>
           <div>
@@ -70,15 +107,22 @@ const PasscodeSetupModal: React.FC<PasscodeSetupModalProps> = ({ isOpen, onClose
               value={confirmPasscode}
               onChange={e => setConfirmPasscode(e.target.value.replace(/\D/g, ''))}
               placeholder="••••"
-              className="w-full px-4 py-3 text-center tracking-[1em] text-lg bg-[var(--bg-tertiary)] border-[var(--border-secondary)] border rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] transition-all"
+              className="w-full px-4 py-3 text-center tracking-[1em] text-2xl bg-[var(--bg-tertiary)] border-[var(--border-secondary)] border rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] transition-all"
             />
           </div>
-          <div className="flex justify-end space-x-4 pt-4 mt-4">
-            <button type="button" onClick={onClose} className="px-6 py-2 rounded-lg text-[var(--text-primary)] bg-[var(--bg-tertiary)] hover:opacity-80 border border-[var(--border-secondary)] font-semibold transition-colors">
+          <div className="flex justify-end space-x-4 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-2 rounded-lg text-[var(--text-primary)] bg-[var(--bg-tertiary)] hover:opacity-80 border border-[var(--border-secondary)] font-semibold transition-colors"
+            >
               Cancel
             </button>
-            <button type="submit" className="px-6 py-2 rounded-lg text-[var(--accent-primary-text)] bg-[var(--accent-primary)] hover:bg-[var(--accent-secondary)] font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-px transition-all">
-              Save Passcode
+            <button
+              type="submit"
+              className="px-6 py-2 rounded-lg text-[var(--accent-primary-text)] bg-[var(--accent-primary)] hover:bg-[var(--accent-secondary)] font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-px transition-all"
+            >
+              Save
             </button>
           </div>
         </form>

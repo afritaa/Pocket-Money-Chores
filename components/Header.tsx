@@ -1,6 +1,35 @@
+
+
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { CoinIcon, HistoryIcon, UserCircleIcon, ChevronLeftIcon, ChevronRightIcon, DAY_SHORT_NAMES, DAYS_OF_WEEK } from '../constants';
-import { Profile, Day } from '../types';
+import { Profile, Day, BonusNotification } from '../types';
+import BonusNotificationButton from './BonusNotificationButton';
+import { useSound } from '../hooks/useSound';
+
+// Helper to format date as YYYY-MM-DD
+const formatDate = (date: Date): string => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0); // Normalize to the start of the day in local time
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getDayFromDate = (date: Date): Day => {
+    const dayIndex = date.getDay();
+    const days: Day[] = [Day.Sun, Day.Mon, Day.Tue, Day.Wed, Day.Thu, Day.Fri, Day.Sat];
+    return days[dayIndex];
+};
+
+const getStartOfWeek = (date: Date): Date => {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day;
+  return new Date(d.setDate(diff));
+};
+
 
 interface HeaderProps {
   earnings: number;
@@ -10,20 +39,18 @@ interface HeaderProps {
   onShowHistory: () => void;
   isCashOutDisabled: boolean;
   showCashOutButton: boolean;
-  viewMode: 'weekly' | 'daily';
-  setViewMode: (mode: 'weekly' | 'daily') => void;
   weeklyTitle: string;
   isToday: boolean;
   selectedDate: Date;
   setSelectedDate: (date: Date) => void;
-  currentWeekDays: Date[];
-  handlePreviousWeek: () => void;
-  handleNextWeek: () => void;
   isViewingCurrentWeek: boolean;
   handleGoToCurrentWeek: () => void;
   onUpdateProfileImage: (profileId: string, image: string | null) => void;
-  isTouchDevice: boolean;
   onEditCurrentProfile: (profile: Profile) => void;
+  pendingBonuses: BonusNotification[];
+  onShowBonusNotification: (bonus: BonusNotification) => void;
+  profiles: Profile[];
+  setActiveProfileId: (id: string) => void;
 }
 
 const usePrevious = <T,>(value: T): T | undefined => {
@@ -79,135 +106,117 @@ const AnimatedNumber = React.memo(({ value, isKidsMode }: { value: number, isKid
     );
 });
 
+const SwipableWeeklyNavigator = ({ 
+    currentDate, 
+    onWeekChange 
+}: { 
+    currentDate: Date, 
+    onWeekChange: (date: Date) => void 
+}) => {
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const scrollTimeout = useRef<number | undefined>(undefined);
 
-const WeeklyDatePicker = ({ selectedDate, onDateSelect, isTouchDevice }: { selectedDate: Date, onDateSelect: (date: Date) => void, isTouchDevice: boolean }) => {
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [currentWeekIndex, setCurrentWeekIndex] = useState(1); // 0: prev, 1: current, 2: next
+    const weeks = useMemo(() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const startOfThisWeek = getStartOfWeek(today);
 
-  const allDates = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const currentDayOfWeek = today.getDay(); // Sunday - 0
-    
-    // Start of the previous week (Sunday)
-    const startOfLastWeek = new Date(today);
-    startOfLastWeek.setDate(today.getDate() - currentDayOfWeek - 7);
-    
-    const dateArray = Array.from({ length: 21 }).map((_, i) => {
-      const d = new Date(startOfLastWeek);
-      d.setDate(d.getDate() + i);
-      return d;
-    });
-    return dateArray;
-  }, []);
-  
-  const weeks = useMemo(() => {
-    return [allDates.slice(0, 7), allDates.slice(7, 14), allDates.slice(14, 21)];
-  }, [allDates]);
-  
-  // Set initial scroll position to the current week
-  useEffect(() => {
-    if (scrollContainerRef.current) {
-        const container = scrollContainerRef.current;
-        setTimeout(() => {
-            container.scrollLeft = container.offsetWidth; // Start on the second week (current week)
-        }, 0);
-    }
-  }, []);
+        const pastWeeks = 4;
+        const futureWeeks = 4;
+        const totalWeeks = pastWeeks + 1 + futureWeeks;
 
-  const handleScroll = () => {
-    if (scrollContainerRef.current) {
-      const { scrollLeft, offsetWidth } = scrollContainerRef.current;
-      const newIndex = Math.round(scrollLeft / offsetWidth);
-      if (newIndex !== currentWeekIndex) {
-        setCurrentWeekIndex(newIndex);
-      }
-    }
-  };
+        return Array.from({ length: totalWeeks }).map((_, index) => {
+            const offset = index - pastWeeks; // Generates offsets from -4 to 4
+            const weekStart = new Date(startOfThisWeek);
+            weekStart.setDate(weekStart.getDate() + (offset * 7));
+            return Array.from({ length: 7 }).map((_, i) => {
+                const d = new Date(weekStart);
+                d.setDate(d.getDate() + i);
+                return d;
+            });
+        });
+    }, []);
 
-  const scrollToWeek = (index: number) => {
-    if (scrollContainerRef.current) {
-      const container = scrollContainerRef.current;
-      container.scrollTo({
-        left: container.offsetWidth * index,
-        behavior: 'smooth'
-      });
-    }
-  };
+    const activeWeekIndex = useMemo(() => {
+        const startOfCurrentDateWeek = getStartOfWeek(currentDate);
+        return weeks.findIndex(week => formatDate(week[0]) === formatDate(startOfCurrentDateWeek));
+    }, [weeks, currentDate]);
 
-  const formatDateString = (date: Date) => `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
-  const todayString = formatDateString(new Date());
+    useEffect(() => {
+        if (scrollContainerRef.current && activeWeekIndex >= 0) {
+            const container = scrollContainerRef.current;
+            if (Math.round(container.scrollLeft / container.offsetWidth) !== activeWeekIndex) {
+                 setTimeout(() => {
+                    container.scrollTo({
+                        left: container.offsetWidth * activeWeekIndex,
+                        behavior: 'auto'
+                    });
+                }, 50);
+            }
+        }
+    }, [activeWeekIndex]);
 
-  return (
-    <div className="relative w-full mt-4 p-2 rounded-xl select-none animate-fade-in-fast">
-       {!isTouchDevice && currentWeekIndex > 0 && (
-          <button 
-              onClick={() => scrollToWeek(currentWeekIndex - 1)}
-              className="absolute left-1 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-white/20 transition-colors z-10"
-              aria-label="Previous week"
-          >
-              <ChevronLeftIcon className="h-6 w-6 text-[var(--text-secondary)]"/>
-          </button>
-      )}
-      {!isTouchDevice && currentWeekIndex < weeks.length - 1 && (
-          <button 
-              onClick={() => scrollToWeek(currentWeekIndex + 1)}
-              className="absolute right-1 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-white/20 transition-colors z-10"
-              aria-label="Next week"
-          >
-              <ChevronRightIcon className="h-6 w-6 text-[var(--text-secondary)]"/>
-          </button>
-      )}
+    const handleScroll = () => {
+        if (scrollTimeout.current) window.clearTimeout(scrollTimeout.current);
 
-      <div className={`w-full ${isTouchDevice ? '' : 'max-w-[calc(100%-5rem)] mx-auto'}`}>
-        <div className="grid grid-cols-7 gap-1 text-center text-xs font-bold text-[var(--text-secondary)] mb-2 px-1">
-          {DAYS_OF_WEEK.map(day => (
-              <div key={day}>{DAY_SHORT_NAMES[day]}</div>
-          ))}
-        </div>
+        scrollTimeout.current = window.setTimeout(() => {
+            if (scrollContainerRef.current) {
+                const { scrollLeft, offsetWidth } = scrollContainerRef.current;
+                const newIndex = Math.round(scrollLeft / offsetWidth);
+                if (newIndex >= 0 && newIndex < weeks.length) {
+                   const newWeekStartDate = weeks[newIndex][0];
+                   if (formatDate(newWeekStartDate) !== formatDate(getStartOfWeek(currentDate))) {
+                       onWeekChange(newWeekStartDate);
+                   }
+                }
+            }
+        }, 150);
+    };
+
+    const todayString = formatDate(new Date());
+
+    return (
         <div
             ref={scrollContainerRef}
-            className="flex overflow-x-auto scrollbar-hide"
+            className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory"
             onScroll={handleScroll}
-            style={{ scrollSnapType: 'x mandatory' }}
         >
             {weeks.map((week, weekIndex) => (
-                <div key={weekIndex} className="grid grid-cols-7 gap-1 flex-[0_0_100%]" style={{ scrollSnapAlign: 'start' }}>
-                    {week.map((date) => {
-                      const isSelected = formatDateString(date) === formatDateString(selectedDate);
-                      const isToday = formatDateString(date) === todayString;
-                      return (
-                        <div key={formatDateString(date)} className="flex justify-center">
-                          <button
-                            onClick={() => onDateSelect(date)}
-                            className={`h-10 flex items-center justify-center rounded-full transition-all duration-200 font-bold text-sm ${isTouchDevice ? 'w-full' : 'w-10'} ${
-                              isSelected
-                                ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)]'
-                                : isToday
-                                ? 'bg-[var(--accent-primary)] bg-opacity-20 text-[var(--text-primary)]'
-                                : 'bg-transparent hover:bg-white/20 text-[var(--text-primary)]'
-                            }`}
-                            aria-label={`Select date ${date.toLocaleDateString()}`}
-                          >
-                            {date.getDate()}
-                          </button>
-                        </div>
-                      );
-                    })}
+                <div key={weekIndex} className="flex flex-col flex-[0_0_100%] snap-center">
+                    <div className="grid grid-cols-7 gap-1 px-2 py-2 bg-[var(--bg-tertiary)] rounded-md mb-3">
+                        {week.map(date => {
+                            const dayOfWeek = getDayFromDate(date);
+                            return (
+                                <div key={date.toISOString()} className="text-center">
+                                    <span className="text-xs font-bold text-[var(--text-secondary)] uppercase">
+                                        {dayOfWeek.toUpperCase()}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <div className="grid grid-cols-7 gap-1 px-2">
+                        {week.map(date => {
+                            const isToday = formatDate(date) === todayString;
+                            
+                            return (
+                                <div key={date.toISOString()} className="flex justify-center items-center">
+                                    <div className={`h-10 w-10 flex items-center justify-center rounded-full transition-all duration-200 font-bold text-sm ${
+                                        isToday 
+                                            ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)]'
+                                            : 'bg-transparent text-[var(--text-primary)]'
+                                    }`}>
+                                        {date.getDate()}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             ))}
         </div>
-      </div>
-
-       <style>{`
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        .select-none { -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
-      `}</style>
-    </div>
-  );
+    );
 };
-
 
 
 const Header: React.FC<HeaderProps> = ({ 
@@ -218,26 +227,47 @@ const Header: React.FC<HeaderProps> = ({
   onShowHistory, 
   isCashOutDisabled, 
   showCashOutButton, 
-  viewMode,
-  setViewMode,
   weeklyTitle,
   isToday,
   selectedDate,
   setSelectedDate,
-  currentWeekDays,
-  handlePreviousWeek,
-  handleNextWeek,
   isViewingCurrentWeek,
   handleGoToCurrentWeek,
   onUpdateProfileImage,
-  isTouchDevice,
-  onEditCurrentProfile
+  onEditCurrentProfile,
+  pendingBonuses,
+  onShowBonusNotification,
+  profiles,
+  setActiveProfileId
 }) => {
   const [showFireworks, setShowFireworks] = useState(false);
   const prevEarnings = usePrevious(earnings);
   const [isPulsing, setIsPulsing] = useState(false);
   const fireworksTimer = useRef<number | undefined>(undefined);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const [isProfileSelectorOpen, setIsProfileSelectorOpen] = useState(false);
+  const selectorRef = useRef<HTMLDivElement>(null);
+  const otherProfiles = useMemo(() => profiles.filter(p => p.id !== profile?.id), [profiles, profile]);
+  const { playCashOut } = useSound();
+
+  const handleCashOutClick = () => {
+    if (!isCashOutDisabled) {
+      playCashOut();
+      onCashOut();
+    }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (selectorRef.current && !selectorRef.current.contains(event.target as Node)) {
+        setIsProfileSelectorOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // Effect for fireworks. The key prop on the JSX element does the re-triggering.
   // This effect just manages the visibility window.
@@ -282,31 +312,63 @@ const Header: React.FC<HeaderProps> = ({
   };
   
   const earningsContent = (
-    <div className="flex items-center space-x-4 px-4 py-3 sm:px-6">
-      <button 
-        onClick={() => profile && onEditCurrentProfile(profile)} 
-        className="flex-shrink-0 rounded-full focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)] focus:ring-[var(--accent-primary)] transition-all"
-        aria-label={`Edit ${profile?.name}'s profile`}
-      >
-        {profile?.image ? (
-          <img src={profile.image} alt={profile.name} className="w-10 h-10 rounded-full object-cover"/>
-        ) : (
-          <UserCircleIcon className="w-10 h-10 text-[var(--text-tertiary)]"/>
+    <div className="flex items-center space-x-4">
+      <div className="relative flex-shrink-0">
+          <button 
+            onClick={() => profile && onEditCurrentProfile(profile)}
+            className="block rounded-full focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)] focus:ring-[var(--accent-primary)] transition-all"
+            aria-label={`Edit ${profile?.name}'s profile`}
+          >
+            {profile?.image ? (
+              <img src={profile.image} alt={profile.name} className="w-14 h-14 rounded-full object-cover"/>
+            ) : (
+              <UserCircleIcon className="w-14 h-14 text-[var(--text-tertiary)]"/>
+            )}
+          </button>
+          
+          {profiles.length > 1 && (
+            <button
+                onClick={() => setIsProfileSelectorOpen(prev => !prev)}
+                className="absolute -bottom-1 -left-1 w-7 h-7 flex items-center justify-center bg-[var(--bg-secondary)] rounded-full border-2 border-[var(--border-primary)] shadow-md hover:bg-[var(--bg-tertiary)] transition-colors"
+                aria-label="Switch child profile"
+            >
+                <span className="text-lg font-bold text-[var(--text-secondary)] leading-none -mt-px select-none">⇄</span>
+            </button>
+          )}
+        </div>
+
+      <div className="relative" ref={selectorRef}>
+        <div className="text-left">
+          <div className="text-sm font-medium text-[var(--text-secondary)] whitespace-nowrap">
+              {profile?.name ? `${profile.name}'s earnings` : 'earnings'}
+          </div>
+          <div className="flex items-center text-2xl sm:text-3xl font-bold text-[var(--text-primary)]" style={{ minWidth: '8ch', fontVariantNumeric: 'tabular-nums' }}>
+            <AnimatedNumber value={earnings} isKidsMode={false} />
+          </div>
+        </div>
+        
+        {isProfileSelectorOpen && otherProfiles.length > 0 && (
+            <div className="absolute top-full left-0 mt-2 w-60 bg-[var(--bg-secondary)]/80 backdrop-blur-lg border border-[var(--border-primary)] rounded-xl shadow-xl z-10 overflow-hidden py-1 animate-fade-in-fast">
+              <div className="px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">Switch to:</div>
+              {otherProfiles.map((p, index) => (
+                <button 
+                  key={p.id} 
+                  onClick={() => { setActiveProfileId(p.id); setIsProfileSelectorOpen(false); }}
+                  className="w-full text-left px-3 py-2 text-sm flex items-center gap-3 hover:bg-[var(--bg-tertiary)] transition-colors animate-slide-in-stagger"
+                  style={{ animationDelay: `${index * 40}ms` }}
+                >
+                  {p.image ? <img src={p.image} alt={p.name} className="w-7 h-7 rounded-full object-cover"/> : <UserCircleIcon className="w-7 h-7"/>}
+                  <span className="font-semibold">{p.name}</span>
+                </button>
+              ))}
+            </div>
         )}
-      </button>
-      <div className="text-left">
-        <div className="text-sm font-medium text-[var(--text-secondary)] whitespace-nowrap">
-            {profile?.name ? `${profile.name}'s Current Earnings` : 'Current Earnings'}
-        </div>
-        <div className="flex items-center text-2xl sm:text-3xl font-bold text-[var(--text-primary)]" style={{ minWidth: '8ch', fontVariantNumeric: 'tabular-nums' }}>
-          <AnimatedNumber value={earnings} isKidsMode={false} />
-        </div>
       </div>
     </div>
   );
  
   const kidsEarningsContent = (
-    <div className="flex flex-col items-center space-y-1 py-3">
+    <div className="flex flex-col items-center space-y-2 py-3">
        {showFireworks && isKidsMode && (
          <div key={`fireworks-kid-${earnings}`} className="absolute inset-0 pointer-events-none flex items-center justify-center">
            {Array.from({ length: 15 }).map((_, i) => (
@@ -322,7 +384,6 @@ const Header: React.FC<HeaderProps> = ({
            ))}
          </div>
        )}
-       <CoinIcon className="h-8 w-8" />
        <div className="text-center">
            <div className="text-sm font-medium text-[var(--text-secondary)]">Earnings</div>
            <div className="flex justify-center items-center text-3xl font-bold text-[var(--text-primary)]" style={{ minWidth: '8ch', fontVariantNumeric: 'tabular-nums' }}>
@@ -331,43 +392,6 @@ const Header: React.FC<HeaderProps> = ({
        </div>
    </div>
  );
-  
-  const WeekNavigator = () => {
-    return (
-      <div className={`w-full flex items-center justify-between p-2 mt-4 animate-fade-in-fast`}>
-        {/* Left Arrow (or spacer on touch) */}
-        {!isTouchDevice ? (
-            <button onClick={handlePreviousWeek} className="p-2 rounded-full hover:bg-white/20 transition-colors" aria-label="Previous week">
-                <ChevronLeftIcon />
-            </button>
-        ) : <div className="w-10 h-10" /> /* Spacer */}
-
-        {/* Centered Content */}
-        <div className="flex-grow text-center px-2">
-          <h3 className="text-lg font-bold text-[var(--text-primary)]">
-              {weeklyTitle}
-          </h3>
-          <div className="h-5"> {/* Container to prevent layout shift */}
-            <button
-              onClick={handleGoToCurrentWeek}
-              className={`text-sm font-semibold text-[var(--accent-primary)] hover:underline transition-opacity duration-300 ${isViewingCurrentWeek ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-              aria-hidden={isViewingCurrentWeek}
-              tabIndex={isViewingCurrentWeek ? -1 : 0}
-            >
-              Go to This Week
-            </button>
-          </div>
-        </div>
-
-        {/* Right Arrow (or spacer on touch) */}
-        {!isTouchDevice ? (
-            <button onClick={handleNextWeek} disabled={isViewingCurrentWeek} className="p-2 rounded-full hover:bg-white/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" aria-label="Next week">
-                <ChevronRightIcon />
-            </button>
-        ) : <div className="w-10 h-10" /> /* Spacer */}
-      </div>
-    );
-  };
   
   return (
     <>
@@ -406,10 +430,15 @@ const Header: React.FC<HeaderProps> = ({
               <div className="animate-shimmer absolute inset-0"></div>
               <div className="relative z-10">
                 {kidsEarningsContent}
-                {showCashOutButton && (
+                {pendingBonuses.length > 0 && (
+                  <BonusNotificationButton 
+                    onClick={() => onShowBonusNotification(pendingBonuses[0])}
+                  />
+                )}
+                {showCashOutButton && pendingBonuses.length === 0 && (
                     <div className="px-4 pb-4 animate-fade-in-fast">
                       <button 
-                          onClick={onCashOut}
+                          onClick={handleCashOutClick}
                           disabled={isCashOutDisabled}
                           className="w-full bg-[var(--success)] hover:opacity-80 text-[var(--success-text)] font-bold py-3 px-4 rounded-lg transform hover:-translate-y-px transition-all disabled:bg-[var(--bg-tertiary)] disabled:text-[var(--text-tertiary)] disabled:shadow-none disabled:cursor-not-allowed disabled:transform-none"
                       >
@@ -422,55 +451,54 @@ const Header: React.FC<HeaderProps> = ({
         </div>
       ) : (
         <>
-            <div className="w-full grid grid-cols-2 md:grid-cols-3 items-center gap-4">
-                <div className="justify-self-start">
+            <div className="w-full flex justify-between items-start gap-4">
+                <div className="flex-shrink-0">
                     {earningsContent}
                 </div>
-
-                <div className="hidden md:flex justify-center">
-                    <div className="bg-[var(--bg-tertiary)] rounded-full p-1.5 flex items-center">
-                        <button onClick={() => setViewMode('weekly')} className={`px-6 py-2 text-base font-semibold rounded-full transition-colors duration-300 ${viewMode === 'weekly' ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)]' : 'text-[var(--text-secondary)]'}`}>Weekly</button>
-                        <button onClick={() => setViewMode('daily')} className={`px-6 py-2 text-base font-semibold rounded-full transition-colors duration-300 ${viewMode === 'daily' ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)]' : 'text-[var(--text-secondary)]'}`}>Daily</button>
-                    </div>
-                </div>
                 
-                <div className="justify-self-end col-start-2 md:col-start-3">
-                    <div className="flex flex-col items-end gap-2">
-                        {showCashOutButton && (
-                            <button 
-                                onClick={onCashOut}
-                                disabled={isCashOutDisabled}
-                                className="min-w-[150px] flex justify-center bg-[var(--success)] hover:opacity-80 text-[var(--success-text)] font-bold py-2 px-4 rounded-lg transform hover:-translate-y-px transition-all disabled:bg-[var(--bg-tertiary)] disabled:text-[var(--text-tertiary)] disabled:shadow-none disabled:cursor-not-allowed disabled:transform-none"
-                            >
-                                Cash Out
-                            </button>
-                        )}
-                        
-                        <button 
-                            onClick={onShowHistory}
-                            className="min-w-[150px] bg-[var(--bg-tertiary)] hover:opacity-80 text-[var(--text-primary)] font-semibold py-2 px-4 rounded-lg border border-[var(--border-secondary)] transition-colors flex items-center gap-1.5 justify-center"
-                        >
-                            <HistoryIcon />
-                            <span>History</span>
-                        </button>
-                    </div>
+                <div className="flex-shrink-0">
+                  <div className="flex flex-col items-end gap-2">
+                      {showCashOutButton && (
+                          <button 
+                              onClick={handleCashOutClick}
+                              disabled={isCashOutDisabled}
+                              className="w-[120px] flex justify-center bg-[var(--success)] hover:opacity-80 text-[var(--success-text)] font-bold py-2 px-4 rounded-lg transform hover:-translate-y-px transition-all disabled:bg-[var(--bg-tertiary)] disabled:text-[var(--text-tertiary)] disabled:shadow-none disabled:cursor-not-allowed disabled:transform-none"
+                          >
+                              Cash Out
+                          </button>
+                      )}
+                      
+                      <button 
+                          onClick={onShowHistory}
+                          className="w-[120px] bg-[var(--bg-tertiary)] hover:opacity-80 text-[var(--text-primary)] font-semibold py-2 px-4 rounded-lg border border-[var(--border-secondary)] transition-colors flex items-center gap-1.5 justify-center"
+                      >
+                          <HistoryIcon />
+                          <span>History</span>
+                      </button>
+                  </div>
                 </div>
             </div>
             
-            <div className="mt-6">
-                <div className="flex md:hidden items-center justify-center">
-                    <div className="bg-[var(--bg-tertiary)] rounded-full p-1.5 flex items-center">
-                        <button onClick={() => setViewMode('weekly')} className={`px-6 py-2 text-base font-semibold rounded-full transition-colors duration-300 ${viewMode === 'weekly' ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)]' : 'text-[var(--text-secondary)]'}`}>Weekly</button>
-                        <button onClick={() => setViewMode('daily')} className={`px-6 py-2 text-base font-semibold rounded-full transition-colors duration-300 ${viewMode === 'daily' ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)]' : 'text-[var(--text-secondary)]'}`}>Daily</button>
-                    </div>
+            <div className="mt-2">
+              <div className="relative w-full animate-fade-in-fast select-none">
+                <div className="text-center mb-3">
+                  <h3 className="text-lg font-bold text-[var(--text-primary)]">{weeklyTitle}</h3>
+                  <div className="h-5">
+                    <button
+                      onClick={handleGoToCurrentWeek}
+                      className={`text-sm font-semibold text-[var(--accent-primary)] hover:underline transition-opacity duration-300 ${isViewingCurrentWeek ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+                      aria-hidden={isViewingCurrentWeek}
+                      tabIndex={isViewingCurrentWeek ? -1 : 0}
+                    >
+                      Go to This Week
+                    </button>
+                  </div>
                 </div>
-              
-              {viewMode === 'weekly' && (
-                <WeekNavigator />
-              )}
-              {viewMode === 'daily' && !isKidsMode && (
-                <WeeklyDatePicker selectedDate={selectedDate} onDateSelect={setSelectedDate} isTouchDevice={isTouchDevice} />
-              )}
+                <SwipableWeeklyNavigator 
+                  currentDate={selectedDate}
+                  onWeekChange={setSelectedDate}
+                />
+              </div>
             </div>
         </>
       )}
@@ -488,8 +516,18 @@ const Header: React.FC<HeaderProps> = ({
           .animate-fireworks-burst {
               animation: fireworks-burst 0.8s ease-out forwards;
           }
-           @keyframes fade-in-fast { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-          .animate-fade-in-fast { animation: fade-in-fast 0.3s ease-out forwards; }
+          @keyframes fade-in-fast { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+          .animate-fade-in-fast { animation: fade-in-fast 0.2s ease-out forwards; }
+          
+          @keyframes slide-in-stagger {
+            from { opacity: 0; transform: translateX(-15px); }
+            to { opacity: 1; transform: translateX(0); }
+          }
+          .animate-slide-in-stagger {
+              animation: slide-in-stagger 0.3s ease-out forwards;
+              opacity: 0;
+          }
+
           @keyframes shimmer {
             0% { background-position: -200% -200%; }
             100% { background-position: 200% 200%; }

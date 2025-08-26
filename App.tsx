@@ -1,6 +1,8 @@
 
+
+
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { Chore, Day, EarningsRecord, Profile, ParentSettings, PastChoreApproval, CompletionSnapshot, CompletionState, PayDayConfig, BonusNotification } from './types';
+import { Chore, Day, EarningsRecord, Profile, ParentSettings, PastChoreApproval, CompletionSnapshot, CompletionState, PayDayConfig, BonusNotification, BeforeInstallPromptEvent } from './types';
 import Header from './components/Header';
 import ChoreList from './components/ChoreList';
 import ChoreFormModal from './components/AddChoreModal';
@@ -22,7 +24,10 @@ import PastChoresApprovalModal from './components/PastChoresApprovalModal';
 import ReviewCashOutModal from './components/ReviewCashOutModal';
 import BonusAwardModal from './components/BonusAwardModal';
 import BonusAwardedNotificationModal from './components/BonusAwardedNotificationModal';
+import ParentBonusConfirmationModal from './components/ParentBonusConfirmationModal';
 import ActionBar from './components/ActionBar';
+import ProfileSelector from './components/ProfileSelector';
+import { useSound } from './hooks/useSound';
 
 
 // Helper to format date as YYYY-MM-DD
@@ -101,6 +106,8 @@ const ThemeStyles = () => (
         --success: #16a34a; --success-text: #ffffff; --success-bg-subtle: rgba(22, 163, 74, 0.1); --success-border: rgba(22,163,74,0.3); --success-cashed-out-bg: rgba(22, 163, 74, 0.2); --success-cashed-out-text: #166534;
         --danger: #dc2626; --danger-text: #ffffff; --danger-bg-subtle: rgba(220, 38, 38, 0.1); --danger-border: rgba(220,38,38,0.3);
         --warning: #d97706; --warning-text: #ffffff; --warning-bg-subtle: rgba(217, 119, 6, 0.1); --warning-border: rgba(217, 119, 6, 0.3);
+        --bg-image-overlay: none;
+        --bg-image-opacity: 0.15;
     }
     
     body[data-theme='light'] {
@@ -159,7 +166,9 @@ const ThemeStyles = () => (
         --success: #2a9d8f; --success-text: #ffffff; --success-bg-subtle: rgba(42, 157, 143, 0.2); --success-border: #2a9d8f; --success-cashed-out-bg: rgba(42, 157, 143, 0.1); --success-cashed-out-text: #2a9d8f;
         --danger: #e63946; --danger-text: #ffffff; --danger-bg-subtle: rgba(230, 57, 70, 0.2); --danger-border: #e63946;
         --warning: #ffb703; --warning-text: #000000; --warning-bg-subtle: rgba(255, 183, 3, 0.2); --warning-border: #ffb703;
-        --bg-primary-gradient: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg stroke='%23FFD700' stroke-width='1' opacity='0.08'%3E%3Cline x1='20' y1='30' x2='20' y2='70' /%3E%3Cline x1='40' y1='20' x2='40' y2='80' /%3E%3Cline x1='60' y1='20' x2='60' y2='80' /%3E%3Cline x1='80' y1='30' x2='80' y2='70' /%3E%3C/g%3E%3C/svg%3E"), linear-gradient(135deg, #6A0032, #A30D45);
+        --bg-primary-gradient: linear-gradient(135deg, #6A0032, #A30D45);
+        --bg-image-overlay: url("/images/lions_logo.png");
+        --bg-image-opacity: 0.15;
     }
     
     body[data-theme='princess'] {
@@ -203,20 +212,81 @@ const ThemeStyles = () => (
         --success: #28a745; --success-text: #ffffff; --success-bg-subtle: rgba(40, 167, 69, 0.1); --success-border: rgba(40, 167, 69, 0.3); --success-cashed-out-bg: rgba(40, 167, 69, 0.2); --success-cashed-out-text: #1d7a33;
         --danger: #dc3545; --danger-text: #ffffff; --danger-bg-subtle: rgba(220, 53, 69, 0.1); --danger-border: rgba(220, 53, 69, 0.3);
         --warning: #ffc107; --warning-text: #212529; --warning-bg-subtle: rgba(255, 193, 7, 0.1); --warning-border: rgba(255, 193, 7, 0.3);
-        --bg-primary-gradient: var(--bg-primary) url("data:image/svg+xml,%3Csvg width='300' height='300' xmlns='http://www.w3.org/2000/svg'%3E%3Cg stroke='%23343a40' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round' opacity='.05'%3E%3Cpath d='M89.2 63.3c-2.4 1-4.7 2.1-7 3.2-5.7 2.8-11.4 5.6-17.1 8.4-1.2.6-2.3 1.1-3.5 1.7m13.2-19.2c-2.4 1-4.7 2.1-7 3.2-5.7 2.8-11.4 5.6-17.1 8.4-1.2.6-2.3 1.1-3.5 1.7'/%3E%3Cpath d='M76 44.1c-1.2.6-2.3 1.1-3.5 1.7-5.7 2.8-11.4 5.6-17.1 8.4-2.4 1-4.7 2.1-7 3.2l-3.2-6.3c-1-2-3-3.2-5.2-3.2h-7.8c-2.2 0-4.2 1.2-5.2 3.2l-3.2 6.3c-2.3-1-4.6-2.1-6.9-3.2-5.7-2.8-11.4-5.6-17.1-8.4-1.2-.6-2.4-1.1-3.5-1.7'/%3E%3Cpath d='M225.8 59.1c-1.3 0-2.6-.5-3.5-1.5-1-1-1.5-2.3-1.5-3.5 0-2.8 2.2-5 5-5s5 2.2 5 5c0 1.3-.5 2.6-1.5 3.5-1 1-2.2 1.5-3.5 1.5z'/%3E%3Cpath d='M237.1 76.5c-4.9-4.9-12.8-4.9-17.7 0-4.9 4.9-4.9 12.8 0 17.7 2.5 2.5 5.7 3.7 8.9 3.7s6.4-1.2 8.9-3.7c4.9-4.9 4.9-12.8-.1-17.7z'/%3E%3Cpath d='M230.9 59.1c-1.3 0-2.6-.5-3.5-1.5-1-1-1.5-2.3-1.5-3.5 0-2.8 2.2-5 5-5s5 2.2 5 5c0 1.3-.5 2.6-1.5 3.5-1 1-2.2 1.5-3.5 1.5z'/%3E%3Cpath d='M104.2 214.2c-5.7 0-11.4-2.2-15.8-6.6-4.4-4.4-6.6-10.1-6.6-15.8s2.2-11.4 6.6-15.8c4.4-4.4 10.1-6.6 15.8-6.6s11.4 2.2 15.8 6.6c4.4 4.4 6.6 10.1 6.6 15.8s-2.2 11.4-6.6 15.8c-4.4 4.4-10.1 6.6-15.8 6.6z'/%3E%3Cpath d='M104.2 181.2v-11.3m21.1 53.3l-7.9-7.9m-26.3 0l-8 7.9m-8-26.3l-11.3 0m53.3 21.1l-7.9 8m26.3 26.3l8 7.9m-7.9 26.3l7.9 8m-26.3 7.9l-8 8'/%3E%3Cpath d='M169.2 181.2c5.7 0 11.4-2.2 15.8-6.6 4.4-4.4 6.6-10.1 6.6-15.8s-2.2-11.4-6.6-15.8c-4.4-4.4-10.1-6.6-15.8-6.6s-11.4 2.2-15.8 6.6c-4.4 4.4-6.6 10.1-6.6 15.8s2.2 11.4 6.6 15.8c4.4 4.4 10.1 6.6 15.8 6.6z'/%3E%3Cpath d='M169.2 148.2v11.3m-21.1-53.3l7.9 7.9m26.3 0l8-7.9m8 26.3l11.3 0m-53.3-21.1l7.9 8m26.3 26.3l8 7.9m-7.9 26.3l7.9 8m-26.3 7.9l-8 8'/%3E%3Cpath d='M120.1 172.3l21.1-37.4 28 0'/%3E%3C/g%3E%3C/svg%3E") repeat;
+        --bg-primary-gradient: var(--bg-primary);
+        --bg-image-overlay: url("/images/Skateboard.png");
+        --bg-image-opacity: 0.15;
+    }
+    
+    body[data-theme='superhero'] {
+        --bg-primary: #101828; --bg-primary-values-rgb: 16, 24, 40; --bg-secondary: #1e293b; --bg-tertiary: #334155; --bg-backdrop: rgba(16, 24, 40, 0.7);
+        --text-primary: #f8fafc; --text-secondary: #cbd5e1; --text-tertiary: #94a3b8;
+        --accent-primary: #ef4444; --accent-secondary: #dc2626; --accent-primary-text: #ffffff; --accent-primary-values: 239, 68, 68;
+        --border-primary: #334155; --border-secondary: #475569;
+        --success: #22c55e; --success-text: #ffffff; --success-bg-subtle: rgba(34, 197, 94, 0.2); --success-border: rgba(34,197,94,0.5); --success-cashed-out-bg: rgba(34, 197, 94, 0.1); --success-cashed-out-text: #4ade80;
+        --danger: #ef4444; --danger-text: #ffffff; --danger-bg-subtle: rgba(239, 68, 68, 0.2); --danger-border: rgba(239,68,68,0.5);
+        --warning: #f59e0b; --warning-text: #ffffff; --warning-bg-subtle: rgba(245, 158, 11, 0.15); --warning-border: rgba(245, 158, 11, 0.4);
+    }
+    body[data-theme='jungle'] {
+        --bg-primary: #14532d; --bg-primary-values-rgb: 20, 83, 45; --bg-secondary: #166534; --bg-tertiary: #15803d; --bg-backdrop: rgba(20, 83, 45, 0.7);
+        --text-primary: #f0fdf4; --text-secondary: #d1fae5; --text-tertiary: #a7f3d0;
+        --accent-primary: #f97316; --accent-secondary: #ea580c; --accent-primary-text: #ffffff; --accent-primary-values: 249, 115, 22;
+        --border-primary: #15803d; --border-secondary: #16a34a;
+        --success: #14b8a6; --success-text: #ffffff; --success-bg-subtle: rgba(20, 184, 166, 0.2); --success-border: rgba(20, 184, 166, 0.5); --success-cashed-out-bg: rgba(20, 184, 166, 0.1); --success-cashed-out-text: #2dd4bf;
+        --danger: #dc2626; --danger-text: #ffffff; --danger-bg-subtle: rgba(220, 38, 38, 0.2); --danger-border: rgba(220,38,38,0.5);
+        --warning: #f59e0b; --warning-text: #ffffff; --warning-bg-subtle: rgba(245, 158, 11, 0.15); --warning-border: rgba(245, 158, 11, 0.4);
+    }
+    body[data-theme='galaxy'] {
+        --bg-primary: #2b0b3f; --bg-primary-values-rgb: 43, 11, 63; --bg-secondary: #4c1d95; --bg-tertiary: #5b21b6; --bg-backdrop: rgba(43, 11, 63, 0.7);
+        --text-primary: #f3e8ff; --text-secondary: #e9d5ff; --text-tertiary: #d8b4fe;
+        --accent-primary: #ec4899; --accent-secondary: #db2777; --accent-primary-text: #ffffff; --accent-primary-values: 236, 72, 153;
+        --border-primary: #5b21b6; --border-secondary: #7e22ce;
+        --success: #a3e635; --success-text: #1e293b; --success-bg-subtle: rgba(163, 230, 53, 0.2); --success-border: rgba(163, 230, 53, 0.5); --success-cashed-out-bg: rgba(163, 230, 53, 0.1); --success-cashed-out-text: #bef264;
+        --danger: #f43f5e; --danger-text: #ffffff; --danger-bg-subtle: rgba(244, 63, 94, 0.2); --danger-border: rgba(244,63,94,0.5);
+        --warning: #facc15; --warning-text: #1e293b; --warning-bg-subtle: rgba(250, 204, 21, 0.15); --warning-border: rgba(250, 204, 21, 0.4);
+    }
+    body[data-theme='gaming'] {
+        --bg-primary: #0a0a0a; --bg-primary-values-rgb: 10, 10, 10; --bg-secondary: #1a1a1a; --bg-tertiary: #2a2a2a; --bg-backdrop: rgba(10, 10, 10, 0.8);
+        --text-primary: #39ff14; --text-secondary: #00ffff; --text-tertiary: #9ca3af;
+        --accent-primary: #ff00ff; --accent-secondary: #c000c0; --accent-primary-text: #ffffff; --accent-primary-values: 255, 0, 255;
+        --border-primary: #2a2a2a; --border-secondary: #444444;
+        --success: #39ff14; --success-text: #0a0a0a; --success-bg-subtle: rgba(57, 255, 20, 0.2); --success-border: rgba(57, 255, 20, 0.5); --success-cashed-out-bg: rgba(57, 255, 20, 0.1); --success-cashed-out-text: #39ff14;
+        --danger: #ff1818; --danger-text: #ffffff; --danger-bg-subtle: rgba(255, 24, 24, 0.2); --danger-border: rgba(255, 24, 24, 0.5);
+        --warning: #ffff00; --warning-text: #0a0a0a; --warning-bg-subtle: rgba(255, 255, 0, 0.15); --warning-border: rgba(255, 255, 0, 0.4);
+    }
+
+
+    body::before { /* color layer */
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: var(--bg-primary-gradient, var(--bg-primary));
+      z-index: -2;
+    }
+
+    body::after { /* image layer */
+        content: '';
+        position: fixed;
+        inset: 0;
+        background-image: var(--bg-image-overlay);
+        background-size: contain;
+        background-position: center;
+        background-repeat: no-repeat;
+        opacity: var(--bg-image-opacity);
+        z-index: -1;
+        pointer-events: none;
     }
 
     body {
-      background: var(--bg-primary-gradient, var(--bg-primary));
+      background: transparent;
     }
 
-    html.no-scroll {
+    html.no-scroll, body.dragging {
       overflow: hidden;
       overscroll-behavior-y: none;
     }
 
     .glass-header-container {
-        background: rgba(var(--bg-primary-values-rgb), 0.75);
+        background: transparent;
         -webkit-backdrop-filter: blur(12px);
         backdrop-filter: blur(12px);
     }
@@ -228,6 +298,11 @@ const ThemeStyles = () => (
     .parent-fade-mask-bottom-weekly {
         -webkit-mask-image: linear-gradient(to top, transparent 0%, black 1.25rem);
         mask-image: linear-gradient(to top, transparent 0%, black 1.25rem);
+    }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
     }
   `}</style>
 );
@@ -241,7 +316,62 @@ const themeColors: { [key: string]: string } = {
   'ocean': '#e0f7fa',
   'beach': '#fefae0',
   'action': '#f8f9fa',
+  'superhero': '#101828',
+  'jungle': '#14532d',
+  'galaxy': '#2b0b3f',
+  'gaming': '#0a0a0a',
 };
+
+
+const ParentProfileView = React.memo(({
+    profile, chores, earnings, pendingBonuses, ...props 
+}: any) => {
+    const mainScrollRef = useRef<HTMLElement>(null);
+    const [showParentBottomFade, setShowParentBottomFade] = useState(false);
+
+    useEffect(() => {
+        const scrollContainer = mainScrollRef.current;
+        if (!scrollContainer) return;
+
+        const handleScroll = () => {
+            const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+            const showFade = scrollHeight - scrollTop - clientHeight > 20;
+            setShowParentBottomFade(showFade);
+        };
+        
+        handleScroll();
+        scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+        
+        const resizeObserver = new ResizeObserver(handleScroll);
+        resizeObserver.observe(scrollContainer);
+
+        return () => {
+            scrollContainer.removeEventListener('scroll', handleScroll);
+            resizeObserver.unobserve(scrollContainer);
+        };
+    }, [chores]);
+
+    const parentFadeClass = showParentBottomFade ? 'parent-fade-mask-bottom-weekly' : '';
+    const displayMode = 'weekly';
+
+    return (
+        <div className="h-full flex flex-col">
+            <header className="flex-shrink-0 z-10">
+                <div className="container mx-auto px-4 sm:px-6 md:px-8 pt-4 pb-4 md:py-4">
+                  <Header {...props} profile={profile} earnings={earnings} pendingBonuses={pendingBonuses} />
+                </div>
+            </header>
+            
+            <main ref={mainScrollRef} className={`flex-1 overflow-y-auto relative ${parentFadeClass} scrollbar-hide`}>
+                <div className="container mx-auto px-4 sm:px-6 md:px-8">
+                    <ChoreList {...props} chores={chores} viewMode={displayMode} />
+                    <div className="h-24" />
+                </div>
+            </main>
+        </div>
+    );
+});
+
 
 const App: React.FC = () => {
   // Multi-child state management
@@ -253,7 +383,6 @@ const App: React.FC = () => {
     defaultChoreValue: 20,
     defaultBonusValue: 100,
     customCategories: [],
-    areSoundsEnabled: true,
   });
   const [choresByProfile, setChoresByProfile] = usePersistentState<Record<string, Chore[]>>('choresByProfile', {});
   const [earningsHistoryByProfile, setEarningsHistoryByProfile] = usePersistentState<Record<string, EarningsRecord[]>>('earningsHistoryByProfile', {});
@@ -263,18 +392,15 @@ const App: React.FC = () => {
   const [pendingBonusNotificationsByProfile, setPendingBonusNotificationsByProfile] = usePersistentState<Record<string, BonusNotification[]>>('pendingBonusNotificationsByProfile', {});
 
   const mainScrollRef = useRef<HTMLElement>(null);
-  const [showParentBottomFade, setShowParentBottomFade] = useState(false);
-
+  const { playAllDone, playBonusNotify } = useSound();
 
   const hasCompletedOnboarding = useMemo(() => profiles.length > 0, [profiles]);
   const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState<boolean>(!hasCompletedOnboarding);
+  const [mode, setMode] = useState<'kids' | 'parent' | null>(null);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [choreToEdit, setChoreToEdit] = useState<Chore | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<'weekly' | 'daily'>('weekly');
-  
-  const [isKidsMode, setIsKidsMode] = usePersistentState<boolean>('isKidsMode', hasCompletedOnboarding);
   
   const [isAddChildModalOpen, setIsAddChildModalOpen] = useState(false);
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
@@ -285,6 +411,11 @@ const App: React.FC = () => {
   const [isForgotPasscodeModalOpen, setIsForgotPasscodeModalOpen] = useState(false);
   const [isBonusModalOpen, setIsBonusModalOpen] = useState(false);
   const [activeBonusNotification, setActiveBonusNotification] = useState<BonusNotification | null>(null);
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+
+  const [isParentBonusConfirmModalOpen, setIsParentBonusConfirmModalOpen] = useState(false);
+  const [bonusAwardedToName, setBonusAwardedToName] = useState('');
+
 
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isPendingModalOpen, setIsPendingModalOpen] = useState(false);
@@ -300,32 +431,75 @@ const App: React.FC = () => {
   const [isPastApprovalModalOpen, setIsPastApprovalModalOpen] = useState(false);
   const [recordToReview, setRecordToReview] = useState<EarningsRecord | null>(null);
 
-  // Drag and drop state for touch devices
-  const [draggingChoreId, setDraggingChoreId] = useState<string | null>(null);
-  const [dragOverChoreId, setDragOverChoreId] = useState<string | null>(null);
-
+  // New state for swipe navigation
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
+  const [isSwiping, setIsSwiping] = useState(false);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  
   const isTouchDevice = useMemo(() => {
     if (typeof window === 'undefined') return false;
     return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
   }, []);
 
-  // Data migration for areSoundsEnabled
+  // Effect to decide initial mode or show selector
   useEffect(() => {
-    const pSettings = localStorage.getItem('parentSettings');
-    if (pSettings) {
-        try {
-            const parsed = JSON.parse(pSettings);
-            if (parsed.areSoundsEnabled === undefined) {
-                setParentSettings(prev => ({
-                    ...prev,
-                    areSoundsEnabled: true // Default to true for existing users
-                }));
-            }
-        } catch (e) {
-            // Ignore parse errors, the main loader will handle it
+    if (profiles.length === 0) {
+      setIsWelcomeModalOpen(true);
+      setMode(null);
+    } else {
+      setIsWelcomeModalOpen(false);
+      if (mode === null) { // Only decide mode if it's not already set (e.g., from an internal switch)
+        if (profiles.length === 1) {
+          // Auto-login to the single child's view
+          if (activeProfileId !== profiles[0].id) {
+            setActiveProfileId(profiles[0].id);
+          }
+          setMode('kids');
         }
+        // If > 1 profile, mode remains null to trigger the selector
+      }
     }
-  }, [setParentSettings]);
+  }, [profiles, activeProfileId, mode, setActiveProfileId]);
+
+  const isKidsMode = useMemo(() => mode === 'kids', [mode]);
+  const pendingBonuses = useMemo(() => (activeProfileId ? pendingBonusNotificationsByProfile[activeProfileId] : []) || [], [pendingBonusNotificationsByProfile, activeProfileId]);
+
+  useEffect(() => {
+      const isBonusFlowActive = isKidsMode && (pendingBonuses.length > 0 || !!activeBonusNotification);
+      if (isBonusFlowActive) {
+          document.documentElement.classList.add('no-scroll');
+      } else {
+          document.documentElement.classList.remove('no-scroll');
+      }
+      return () => {
+          document.documentElement.classList.remove('no-scroll');
+      };
+  }, [isKidsMode, pendingBonuses, activeBonusNotification]);
+
+  // Listener for PWA installation prompt
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+        e.preventDefault();
+        setInstallPrompt(e as BeforeInstallPromptEvent);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+        window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallApp = async () => {
+      if (!installPrompt) {
+          return;
+      }
+      await installPrompt.prompt();
+      const { outcome } = await installPrompt.userChoice;
+      console.log(`User response to the install prompt: ${outcome}`);
+      setInstallPrompt(null);
+      setIsOptionsMenuOpen(false); // Close the modal after action
+  };
 
   // Data migration for showPotentialEarnings from parentSettings to Profile
   useEffect(() => {
@@ -430,7 +604,7 @@ const App: React.FC = () => {
                     const categoryMaxOrder: { [key: string]: number } = {};
                     newChoresByProfile[profileId] = newChoresByProfile[profileId].map(chore => {
                         if (chore.order !== undefined) return chore;
-                        const categoryKey = chore.category || 'Uncategorized';
+                        const categoryKey = chore.category || 'Anytime';
                         const maxOrder = categoryMaxOrder[categoryKey] === undefined ? -1 : categoryMaxOrder[categoryKey];
                         categoryMaxOrder[categoryKey] = maxOrder + 1;
                         return { ...chore, order: maxOrder + 1 };
@@ -462,7 +636,7 @@ useEffect(() => {
                         const value = (chore.completions as any)[date];
                         if (value === true) {
                             newCompletions[date] = 'completed';
-                        } else if (value === 'completed' || value === 'cashed_out' || value === 'pending_cash_out') {
+                        } else if (value === 'completed' || value === 'cashed_out' || value === 'pending_cash_out' || value === 'pending_acceptance') {
                             newCompletions[date] = value; // Already in new format
                         }
                     }
@@ -494,7 +668,7 @@ useEffect(() => {
     const prevChores = usePrevious(chores);
     
     useEffect(() => {
-        if (!prevChores || !chores.length || isAllChoresDoneModalOpen) return;
+        if (!isKidsMode || !prevChores || !chores.length || isAllChoresDoneModalOpen) return;
         const todayString = formatDate(new Date());
         const wasCompletionJustAddedForToday = chores.some(chore => {
             const prevChore = prevChores.find(p => p.id === chore.id);
@@ -503,15 +677,16 @@ useEffect(() => {
         });
         if (!wasCompletionJustAddedForToday) return;
         const todayDay = getDayFromDate(new Date());
-        const todaysChores = chores.filter(c => c.days.includes(todayDay));
+        const todaysChores = chores.filter(c => c.days.includes(todayDay) || c.oneTimeDate === todayString);
         if (todaysChores.length === 0) return;
         const areAllDoneNow = todaysChores.every(c => c.completions[todayString]);
         if (areAllDoneNow) {
             const todayEarnings = todaysChores.reduce((sum, chore) => chore.completions[todayString] ? sum + chore.value : sum, 0);
             setDailyEarningsForModal(todayEarnings);
             setIsAllChoresDoneModalOpen(true);
+            playAllDone();
         }
-    }, [chores, prevChores, isAllChoresDoneModalOpen]);
+    }, [chores, prevChores, isAllChoresDoneModalOpen, isKidsMode, playAllDone]);
 
   const isFirstTimeThemePrompt = useMemo(() => {
     return isKidsMode && activeProfile && !activeProfile.hasSeenThemePrompt;
@@ -537,23 +712,6 @@ useEffect(() => {
     setIsThemeModalOpen(false);
   };
 
-  useEffect(() => {
-    if (isKidsMode && activeProfileId) {
-        const pendingBonuses = pendingBonusNotificationsByProfile[activeProfileId];
-        if (pendingBonuses && pendingBonuses.length > 0) {
-            const bonusToShow = pendingBonuses[0];
-            setActiveBonusNotification(bonusToShow);
-
-            setPendingBonusNotificationsByProfile(prev => {
-                const newState = { ...prev };
-                newState[activeProfileId] = newState[activeProfileId].slice(1);
-                return newState;
-            });
-        }
-    }
-}, [isKidsMode, activeProfileId, pendingBonusNotificationsByProfile, setPendingBonusNotificationsByProfile]);
-
-
   const handleWelcomeSave = useCallback((data: { name: string; image: string | null; payDayConfig: PayDayConfig; passcode: string | null; }) => {
     const newProfileId = Date.now().toString();
     const newProfile: Profile = {
@@ -566,15 +724,15 @@ useEffect(() => {
       showPotentialEarnings: true,
     };
     setProfiles([newProfile]);
-    setParentSettings(prev => ({ ...prev, passcode: data.passcode, defaultBonusValue: prev.defaultBonusValue || 100, customCategories: prev.customCategories || [], areSoundsEnabled: true }));
+    setParentSettings(prev => ({ ...prev, passcode: data.passcode, defaultBonusValue: prev.defaultBonusValue || 100, customCategories: prev.customCategories || [] }));
     setActiveProfileId(newProfileId);
     setChoresByProfile({ [newProfileId]: [] });
     setEarningsHistoryByProfile({ [newProfileId]: [] });
     setPendingCashOutsByProfile({ [newProfileId]: [] });
     setPastChoreApprovalsByProfile({ [newProfileId]: [] });
     setIsWelcomeModalOpen(false);
-    setIsKidsMode(false);
-  }, [setProfiles, setParentSettings, setActiveProfileId, setChoresByProfile, setEarningsHistoryByProfile, setPendingCashOutsByProfile, setPastChoreApprovalsByProfile, setIsKidsMode]);
+    setMode('parent');
+  }, [setProfiles, setParentSettings, setActiveProfileId, setChoresByProfile, setEarningsHistoryByProfile, setPendingCashOutsByProfile, setPastChoreApprovalsByProfile]);
   
   const handleAddChild = useCallback((data: Omit<Profile, 'id' | 'theme' | 'hasSeenThemePrompt' | 'showPotentialEarnings'>) => {
     const newProfileId = Date.now().toString();
@@ -592,17 +750,17 @@ useEffect(() => {
     setPastChoreApprovalsByProfile(prev => ({ ...prev, [newProfileId]: [] }));
     setPendingBonusNotificationsByProfile(prev => ({...prev, [newProfileId]: [] }));
     setActiveProfileId(newProfileId); // Switch to the new child
-    setIsKidsMode(false); // Go to parent mode to manage the new child
+    setMode('parent'); // Go to parent mode to manage the new child
     setIsAddChildModalOpen(false);
-  }, [setProfiles, setChoresByProfile, setEarningsHistoryByProfile, setPendingCashOutsByProfile, setPastChoreApprovalsByProfile, setPendingBonusNotificationsByProfile, setIsKidsMode]);
+  }, [setProfiles, setChoresByProfile, setEarningsHistoryByProfile, setPendingCashOutsByProfile, setPastChoreApprovalsByProfile, setPendingBonusNotificationsByProfile]);
 
 
   const handleSwitchToChild = (profileId: string) => {
     setActiveProfileId(profileId);
-    setIsKidsMode(true);
+    setMode('kids');
   };
   
-  const handleSwitchToParent = () => setIsKidsMode(false);
+  const handleSwitchToParent = () => setMode('parent');
 
   const handleOpenEditModalForProfile = useCallback((profile: Profile) => {
     setProfileToEdit(profile);
@@ -644,8 +802,8 @@ useEffect(() => {
         }
         if (newProfiles.length === 0) {
             // Reset app to onboarding state
-            setParentSettings({ passcode: null, theme: 'light', defaultChoreValue: 20, defaultBonusValue: 100, customCategories: [], areSoundsEnabled: true });
-            setIsKidsMode(false);
+            setParentSettings({ passcode: null, theme: 'light', defaultChoreValue: 20, defaultBonusValue: 100, customCategories: [] });
+            setMode(null);
         }
         return newProfiles;
     });
@@ -667,7 +825,12 @@ useEffect(() => {
     
     setIsEditProfileModalOpen(false);
     setProfileToEdit(null);
-  }, [activeProfileId, setProfiles, setActiveProfileId, setChoresByProfile, setEarningsHistoryByProfile, setPendingCashOutsByProfile, setPastChoreApprovalsByProfile, setParentSettings, setIsKidsMode, setLastAutoCashOut, setPendingBonusNotificationsByProfile]);
+    if(profiles.filter(p => p.id !== profileId).length <= 1) {
+        setMode(profiles.filter(p => p.id !== profileId).length === 1 ? 'kids' : null);
+    } else {
+        setMode(null); // Show selector after delete if more than one profile remains
+    }
+  }, [activeProfileId, setProfiles, setActiveProfileId, setChoresByProfile, setEarningsHistoryByProfile, setPendingCashOutsByProfile, setPastChoreApprovalsByProfile, setParentSettings, setLastAutoCashOut, setPendingBonusNotificationsByProfile, profiles]);
 
   const handleUpdateParentSettings = useCallback((newSettings: Partial<ParentSettings>) => {
     setParentSettings(prev => ({...prev, ...newSettings}));
@@ -677,18 +840,18 @@ useEffect(() => {
     if (parentSettings.passcode) {
       setIsPasscodeEntryModalOpen(true);
     } else {
-      setIsKidsMode(false);
+      setMode('parent');
     }
-  }, [parentSettings.passcode, setIsKidsMode]);
+  }, [parentSettings.passcode]);
 
   const handlePasscodeSetupSuccess = (passcode: string) => {
     handleUpdateParentSettings({ passcode });
-    setIsKidsMode(false);
+    setMode('parent');
     setIsPasscodeSetupModalOpen(false);
   };
 
   const handlePasscodeEntrySuccess = () => {
-    setIsKidsMode(false);
+    setMode('parent');
     setIsPasscodeEntryModalOpen(false);
   };
 
@@ -699,8 +862,7 @@ useEffect(() => {
 
   const handleForgotPasscodeSuccess = () => {
     handleUpdateParentSettings({ passcode: null });
-    setIsKidsMode(false);
-    setIsForgotPasscodeModalOpen(false);
+    setMode('parent');
     setIsOptionsMenuOpen(true);
   };
 
@@ -754,7 +916,7 @@ useEffect(() => {
     while(loopDate <= nextPayDate) {
         const dateString = formatDate(loopDate);
         const dayOfWeek = getDayFromDate(loopDate);
-        const dailyChores = chores.filter(c => c.days.includes(dayOfWeek));
+        const dailyChores = chores.filter(c => c.days.includes(dayOfWeek) || c.oneTimeDate === dateString);
 
         for (const chore of dailyChores) {
             // Add value ONLY if the chore is not ALREADY completed and counted in currentEarnings
@@ -770,18 +932,25 @@ useEffect(() => {
   }, [chores, activeProfile, calculateEarnings]);
 
 
-  const displayMode = isKidsMode ? 'daily' : viewMode;
+  const displayMode = isKidsMode ? 'daily' : 'weekly';
 
   useEffect(() => { if (isKidsMode) setSelectedDate(new Date()); }, [isKidsMode]);
 
    const filteredChores = useMemo(() => {
     if (!activeProfileId) return [];
     
-    // Sort bonuses to the end within their category/group
-    const baseChores = (displayMode === 'daily'
-        ? chores.filter(chore => chore.days.includes(getDayFromDate(selectedDate)))
-        : chores
-    ).sort((a, b) => {
+    const baseChores = (chores.filter(chore => {
+        if (displayMode === 'daily') {
+            if (chore.type === 'bonus') {
+                return chore.completions[formatDate(selectedDate)] !== undefined;
+            }
+            if (chore.oneTimeDate) {
+                return chore.oneTimeDate === formatDate(selectedDate);
+            }
+            return chore.days.includes(getDayFromDate(selectedDate));
+        }
+        return true; // Parent weekly view filtering is handled later
+    })).sort((a, b) => {
         const aIsBonus = a.type === 'bonus';
         const bIsBonus = b.type === 'bonus';
         if (aIsBonus && !bIsBonus) return 1;
@@ -801,7 +970,7 @@ useEffect(() => {
     if (!activeProfileId || !isKidsMode) return { completed: 0, total: 0 };
     const todayDay = getDayFromDate(new Date());
     const todayString = formatDate(new Date());
-    const todaysChores = chores.filter(c => c.days.includes(todayDay));
+    const todaysChores = chores.filter(c => c.days.includes(todayDay) || c.oneTimeDate === todayString);
     const completedCount = todaysChores.filter(c => {
         const state = c.completions[todayString];
         return state === 'completed' || state === 'cashed_out' || state === 'pending_cash_out';
@@ -809,68 +978,24 @@ useEffect(() => {
     return { completed: completedCount, total: todaysChores.length };
 }, [chores, activeProfileId, isKidsMode]);
   
-  const handleReorderChores = useCallback((draggedChoreId: string, targetChoreId: string) => {
+  const handleReorderChores = useCallback((reorderedChores: Chore[], category: string | null) => {
     if (!activeProfileId) return;
+
     setChoresByProfile(prev => {
         const currentChores = prev[activeProfileId] || [];
-        const draggedChore = currentChores.find(c => c.id === draggedChoreId);
-        const targetChore = currentChores.find(c => c.id === targetChoreId);
-        if (!draggedChore || !targetChore || draggedChore.category !== targetChore.category) return prev;
-
-        const choresInCategory = currentChores
-            .filter(c => c.category === draggedChore.category)
-            .sort((a, b) => a.order - b.order);
+        const otherCategoryChores = currentChores.filter(c => c.category !== category);
         
-        const otherChores = currentChores.filter(c => c.category !== draggedChore.category);
+        const updatedChoresForCategory = reorderedChores.map((chore, index) => ({
+            ...chore,
+            order: index,
+        }));
 
-        const draggedIndex = choresInCategory.findIndex(c => c.id === draggedChoreId);
-        const [removed] = choresInCategory.splice(draggedIndex, 1);
-        
-        const targetIndex = choresInCategory.findIndex(c => c.id === targetChoreId);
-        choresInCategory.splice(targetIndex, 0, removed);
-
-        const updatedChoresInCategory = choresInCategory.map((chore, index) => ({ ...chore, order: index }));
-        return { ...prev, [activeProfileId]: [...otherChores, ...updatedChoresInCategory] };
+        return {
+            ...prev,
+            [activeProfileId]: [...otherCategoryChores, ...updatedChoresForCategory],
+        };
     });
-  }, [setChoresByProfile, activeProfileId]);
-
-  // Touch drag and drop handlers
-  const handleDragStartTouch = useCallback((e: React.TouchEvent, choreId: string) => {
-    e.stopPropagation();
-    setDraggingChoreId(choreId);
-    document.documentElement.classList.add('no-scroll');
-  }, []);
-
-  const handleDragMoveTouch = useCallback((e: TouchEvent) => {
-      if (!draggingChoreId) return;
-      e.preventDefault();
-      const touch = e.touches[0];
-      const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
-      const choreCardElement = targetElement?.closest('[data-chore-id]');
-      setDragOverChoreId(choreCardElement?.getAttribute('data-chore-id') || null);
-  }, [draggingChoreId]);
-
-  const handleDragEndTouch = useCallback(() => {
-      if (draggingChoreId && dragOverChoreId) {
-          handleReorderChores(draggingChoreId, dragOverChoreId);
-      }
-      setDraggingChoreId(null);
-      setDragOverChoreId(null);
-      document.documentElement.classList.remove('no-scroll');
-  }, [draggingChoreId, dragOverChoreId, handleReorderChores]);
-  
-  useEffect(() => {
-    if (draggingChoreId) {
-      document.addEventListener('touchmove', handleDragMoveTouch, { passive: false });
-      document.addEventListener('touchend', handleDragEndTouch);
-      document.addEventListener('touchcancel', handleDragEndTouch);
-    }
-    return () => {
-      document.removeEventListener('touchmove', handleDragMoveTouch);
-      document.removeEventListener('touchend', handleDragEndTouch);
-      document.removeEventListener('touchcancel', handleDragEndTouch);
-    };
-  }, [draggingChoreId, handleDragMoveTouch, handleDragEndTouch]);
+  }, [activeProfileId, setChoresByProfile]);
 
 
   const handleOpenAddModal = () => { setChoreToEdit(null); setIsModalOpen(true); };
@@ -991,13 +1116,35 @@ useEffect(() => {
   }, [activeProfileId, chores, profiles, calculateEarnings, setPendingCashOutsByProfile, isKidsMode]);
 
   const handleAwardBonus = useCallback((selectedProfileIds: string[], amount: number, note: string) => {
+    const bonusId = Date.now().toString();
+    const choreId = `bonus_${bonusId}`;
     const today = new Date();
     const todayDateString = formatDate(today);
-    const todayDay = getDayFromDate(today);
+
+    // Create a pending chore for each selected profile
+    setChoresByProfile(prev => {
+        const newState = { ...prev };
+        selectedProfileIds.forEach(pId => {
+            const currentChores = newState[pId] || [];
+            const newBonusChore: Chore = {
+                id: choreId,
+                name: 'Bonus',
+                value: amount,
+                days: [],
+                completions: { [todayDateString]: 'pending_acceptance' as CompletionState },
+                icon: 'star_icon',
+                category: null,
+                order: 99999 + currentChores.length,
+                type: 'bonus',
+                note: note,
+            };
+            newState[pId] = [...currentChores, newBonusChore];
+        });
+        return newState;
+    });
 
     // Cue up notification for child
-    const newBonusNotificationId = Date.now().toString();
-    const newBonusNotification: BonusNotification = { id: newBonusNotificationId, amount, note };
+    const newBonusNotification: BonusNotification = { id: bonusId, amount, note };
     setPendingBonusNotificationsByProfile(prev => {
         const newState = { ...prev };
         selectedProfileIds.forEach(pId => {
@@ -1006,30 +1153,48 @@ useEffect(() => {
         return newState;
     });
 
-    // Create a new "bonus" chore for each selected profile
-    setChoresByProfile(prev => {
-      const newState = { ...prev };
-      selectedProfileIds.forEach((pId, index) => {
-        const currentChores = newState[pId] || [];
-        const newBonusChore: Chore = {
-          id: `bonus_${Date.now().toString()}_${index}`,
-          name: 'Bonus',
-          value: amount,
-          days: [todayDay],
-          completions: { [todayDateString]: 'completed' },
-          icon: 'bonus_icon', // Special identifier for the icon
-          category: null,
-          order: 99999 + currentChores.length, // Ensure it's last
-          type: 'bonus',
-          note: note,
-        };
-        newState[pId] = [...currentChores, newBonusChore];
-      });
-      return newState;
-    });
-
+    // Show confirmation for parent
+    const names = profiles.filter(p => selectedProfileIds.includes(p.id)).map(p => p.name).join(', ');
+    setBonusAwardedToName(names);
+    setIsParentBonusConfirmModalOpen(true);
+    
     setIsBonusModalOpen(false);
-}, [setPendingBonusNotificationsByProfile, setChoresByProfile]);
+  }, [profiles, setChoresByProfile, setPendingBonusNotificationsByProfile]);
+
+  const handleShowBonusNotification = (bonus: BonusNotification) => {
+      if (!activeProfileId) return;
+      playBonusNotify();
+      setActiveBonusNotification(bonus);
+      setPendingBonusNotificationsByProfile(prev => {
+          const newState = { ...prev };
+          newState[activeProfileId] = (newState[activeProfileId] || []).filter(b => b.id !== bonus.id);
+          return newState;
+      });
+  };
+
+  const handleAcknowledgeBonus = (bonus: BonusNotification) => {
+      if (!activeProfileId) return;
+      const choreIdToUpdate = `bonus_${bonus.id}`;
+      const todayDateString = formatDate(new Date());
+
+      setChoresByProfile(prev => {
+          const profileChores = prev[activeProfileId] || [];
+          const updatedChores = profileChores.map(chore => {
+              if (chore.id === choreIdToUpdate) {
+                  const firstCompletionDate = Object.keys(chore.completions)[0];
+                  if (chore.completions[firstCompletionDate] === 'pending_acceptance') {
+                      const newCompletions = { ...chore.completions, [firstCompletionDate]: 'completed' as CompletionState };
+                      return { ...chore, completions: newCompletions };
+                  }
+              }
+              return chore;
+          });
+          return { ...prev, [activeProfileId]: updatedChores };
+      });
+
+      setActiveBonusNotification(null);
+  };
+
 
   const handleShowHistory = () => setIsHistoryModalOpen(true);
   const handleCloseHistoryModal = () => setIsHistoryModalOpen(false);
@@ -1138,7 +1303,6 @@ useEffect(() => {
   const isCashOutDisabled = useMemo(() => earnings <= 0, [earnings]);
 
   useEffect(() => { setIsWelcomeModalOpen(!hasCompletedOnboarding); }, [hasCompletedOnboarding]);
-  useEffect(() => { if (!isKidsMode && viewMode === 'daily') setSelectedDate(new Date()); }, [viewMode, isKidsMode]);
   
   useEffect(() => {
     if (isKidsMode && isToday) {
@@ -1210,85 +1374,6 @@ useEffect(() => {
     }
   }, [isKidsMode, isToday, filteredChores, activeProfileId]);
 
-  // Effect for fade on scroll
-  useEffect(() => {
-    const scrollContainer = mainScrollRef.current;
-    if (!scrollContainer) return;
-
-    const handleScroll = () => {
-        if (!isKidsMode) {
-            const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
-            const showFade = scrollHeight - scrollTop - clientHeight > 20;
-            setShowParentBottomFade(showFade);
-        }
-    };
-    
-    handleScroll(); // Initial check
-    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
-    
-    // Also re-check when content changes
-    const resizeObserver = new ResizeObserver(handleScroll);
-    resizeObserver.observe(scrollContainer);
-
-    return () => {
-        scrollContainer.removeEventListener('scroll', handleScroll);
-        resizeObserver.unobserve(scrollContainer);
-    };
-}, [isKidsMode, activeProfileId, chores, viewMode]);
-
-// Effect for swiping between views in parent mode
-useEffect(() => {
-    if (isKidsMode || !isTouchDevice) return;
-
-    const swipeTarget = mainScrollRef.current;
-    if (!swipeTarget) return;
-
-    let touchstartX = 0;
-    let touchstartY = 0;
-    let touchendX = 0;
-    let touchendY = 0;
-
-    const handleTouchStart = (e: TouchEvent) => {
-        touchstartX = e.changedTouches[0].screenX;
-        touchstartY = e.changedTouches[0].screenY;
-    };
-
-    const handleTouchEnd = (e: TouchEvent) => {
-        touchendX = e.changedTouches[0].screenX;
-        touchendY = e.changedTouches[0].screenY;
-        handleSwipe();
-    };
-
-    const handleSwipe = () => {
-        const deltaX = touchendX - touchstartX;
-        const deltaY = touchendY - touchstartY;
-        
-        // We want horizontal swipes, so deltaX should be much larger than deltaY
-        if (Math.abs(deltaX) < 50 || Math.abs(deltaX) < Math.abs(deltaY) * 1.5) {
-            return; // Not a significant horizontal swipe
-        }
-
-        if (touchendX < touchstartX) { // Swiped left
-            if (viewMode === 'weekly') {
-                setViewMode('daily');
-            }
-        }
-
-        if (touchendX > touchstartX) { // Swiped right
-            if (viewMode === 'daily') {
-                setViewMode('weekly');
-            }
-        }
-    };
-
-    swipeTarget.addEventListener('touchstart', handleTouchStart);
-    swipeTarget.addEventListener('touchend', handleTouchEnd);
-
-    return () => {
-        swipeTarget.removeEventListener('touchstart', handleTouchStart);
-        swipeTarget.removeEventListener('touchend', handleTouchEnd);
-    };
-}, [isKidsMode, isTouchDevice, viewMode, setViewMode]);
 
   // Effect for automatic pay day cash outs
   useEffect(() => {
@@ -1328,21 +1413,34 @@ useEffect(() => {
 
   const themeForModal = isKidsMode ? (activeProfile?.theme || 'light') : (parentSettings.theme || 'light');
   
-  const handlePreviousWeek = () => setCurrentDate(prev => { const d = new Date(prev); d.setDate(d.getDate() - 7); return d; });
-  const handleNextWeek = () => setCurrentDate(prev => { const d = new Date(prev); d.setDate(d.getDate() + 7); return d; });
   const handleGoToCurrentWeek = () => setCurrentDate(new Date());
   
   const isViewingCurrentWeek = useMemo(() => formatDate(getStartOfWeek(new Date())) === formatDate(getStartOfWeek(currentDate)), [currentDate]);
 
   const weeklyTitle = useMemo(() => {
-    if (isViewingCurrentWeek) return "This Week";
-    if (formatDate(getStartOfWeek(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))) === formatDate(getStartOfWeek(currentDate))) return "Last Week";
-    const start = currentWeekDays[0];
-    const end = currentWeekDays[6];
-    const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
-    const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
-    return startMonth === endMonth ? `${startMonth} ${start.getDate()} - ${end.getDate()}` : `${startMonth} ${start.getDate()} - ${endMonth} ${end.getDate()}`;
-  }, [currentWeekDays, isViewingCurrentWeek, currentDate]);
+    // When viewing the current week, the title should reflect the current actual month.
+    if (isViewingCurrentWeek) {
+      const today = new Date();
+      return today.toLocaleDateString('en-US', { month: 'long' });
+    }
+
+    // For past weeks, show the month(s) of the week being viewed.
+    const start = getStartOfWeek(currentDate);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    
+    const startMonth = start.toLocaleDateString('en-US', { month: 'long' });
+    const endMonth = end.toLocaleDateString('en-US', { month: 'long' });
+    
+    if (startMonth === endMonth) {
+        return startMonth;
+    }
+    
+    const startMonthShort = start.toLocaleDateString('en-US', { month: 'short' });
+    const endMonthShort = end.toLocaleDateString('en-US', { month: 'short' });
+
+    return `${startMonthShort} / ${endMonthShort}`;
+  }, [currentDate, isViewingCurrentWeek]);
 
   const handleOpenProfileForEditing = useCallback((profileId: string) => {
       const profile = profiles.find(p => p.id === profileId);
@@ -1353,103 +1451,304 @@ useEffect(() => {
       }
   }, [profiles]);
   
-  const isBlurActive = isWelcomeModalOpen || (isThemeModalOpen && isFirstTimeThemePrompt);
+  const isBlurActive = isWelcomeModalOpen || (isThemeModalOpen && isFirstTimeThemePrompt) || mode === null;
 
-  if (!hasCompletedOnboarding) {
+    // Find the index of the currently active profile
+  const activeProfileIndex = useMemo(() => {
+    if (!activeProfileId || !profiles.length) return 0;
+    const index = profiles.findIndex(p => p.id === activeProfileId);
+    return index === -1 ? 0 : index;
+  }, [profiles, activeProfileId]);
+
+  // Touch handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    // Ignore swipe if a modal is open or if dragging a chore
+    if (isModalOpen || isOptionsMenuOpen || isEditProfileModalOpen || isPasscodeSetupModalOpen || isPasscodeEntryModalOpen || isForgotPasscodeModalOpen || isBonusModalOpen || isHistoryModalOpen || isPendingModalOpen || recordToReview || isPastApprovalModalOpen || isAddChildModalOpen || isThemeModalOpen) {
+        return;
+    }
+    setTouchStart({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY });
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStart) return;
+
+    const currentX = e.targetTouches[0].clientX;
+    const currentY = e.targetTouches[0].clientY;
+    const diffX = currentX - touchStart.x;
+    
+    if (!isSwiping) {
+        const diffY = Math.abs(currentY - touchStart.y);
+        if (Math.abs(diffX) > diffY && Math.abs(diffX) > 10) {
+            setIsSwiping(true);
+        } else if (diffY > Math.abs(diffX)) {
+            setTouchStart(null);
+            return;
+        }
+    }
+    
+    if (isSwiping) {
+        e.preventDefault();
+        const isFirstProfile = activeProfileIndex === 0;
+        const isLastProfile = activeProfileIndex === profiles.length - 1;
+
+        // Dampen the swipe when at the edges
+        if ((isFirstProfile && diffX > 0) || (isLastProfile && diffX < 0)) {
+            const resistance = 1 + (Math.abs(diffX) / window.innerWidth) * 2;
+            setSwipeOffset(diffX / resistance);
+            return;
+        }
+
+        setSwipeOffset(diffX);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !isSwiping) {
+        setTouchStart(null);
+        setSwipeOffset(0);
+        return;
+    }
+
+    const diffX = swipeOffset;
+    const containerWidth = window.innerWidth;
+    
+    let newIndex = activeProfileIndex;
+    if (Math.abs(diffX) > containerWidth / 4) { 
+        if (diffX < 0 && activeProfileIndex < profiles.length - 1) { 
+            newIndex++;
+        } else if (diffX > 0 && activeProfileIndex > 0) {
+            newIndex--;
+        }
+    }
+    
+    if (newIndex >= 0 && newIndex < profiles.length) {
+        setActiveProfileId(profiles[newIndex].id);
+    }
+
+    setIsSwiping(false);
+    setTouchStart(null);
+    setSwipeOffset(0);
+  };
+  
+  const parentContainerStyle = useMemo(() => {
+    if (isKidsMode) return {};
+    const baseOffset = -activeProfileIndex * 100;
+    const additionalOffset = isSwiping ? swipeOffset : 0;
+    
+    return {
+        transform: `translateX(calc(${baseOffset}vw + ${additionalOffset}px))`,
+        transition: isSwiping ? 'none' : 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+        width: `${profiles.length * 100}vw`,
+    };
+  }, [activeProfileIndex, swipeOffset, isSwiping, isKidsMode, profiles.length]);
+
+
+  if (isWelcomeModalOpen) {
       return (
           <div className="min-h-screen text-[var(--text-primary)] relative bg-[var(--bg-primary)]">
              <ThemeStyles />
              <WelcomeModal isOpen={isWelcomeModalOpen} onSave={handleWelcomeSave} />
-             {isBlurActive && (
-                <div 
-                    className="fixed inset-0 bg-transparent backdrop-blur-sm z-30"
-                    aria-hidden="true"
-                />
-            )}
           </div>
+      );
+  }
+  
+  if (mode === null) {
+      return (
+          <>
+            <ThemeStyles />
+            <ProfileSelector 
+              profiles={profiles}
+              onSelectProfile={handleSwitchToChild}
+              onAttemptSwitchToParentMode={handleAttemptSwitchToParentMode}
+              lastActiveProfileId={activeProfileId}
+            />
+          </>
       );
   }
 
   const showAddChorePulse = !isKidsMode && filteredChores.length === 0;
-  
-  let parentFadeClass = '';
-  if (!isKidsMode) {
-    if (viewMode === 'weekly') {
-      parentFadeClass = 'parent-fade-mask-bottom-weekly';
-    } else if (showParentBottomFade) {
-      parentFadeClass = 'parent-fade-mask-bottom';
-    }
-  }
 
   return (
-    <div className={`h-screen flex flex-col text-[var(--text-primary)] relative bg-[var(--bg-primary)]`}>
+    <div className={`h-screen flex flex-col text-[var(--text-primary)] relative ${!isKidsMode ? 'overflow-hidden' : ''}`}>
       <ThemeStyles />
-      <header className="sticky top-0 z-30 glass-header-container">
-        <div className="container mx-auto px-4 sm:px-6 md:px-8 py-4">
-          <MenuBanner
-            isKidsMode={isKidsMode} onSwitchToChild={handleSwitchToChild}
-            onAttemptSwitchToParentMode={handleAttemptSwitchToParentMode}
-            pendingCount={pendingCashOuts.length} onShowPending={handleOpenPendingModal}
-            profiles={profiles} activeProfileId={activeProfileId}
-            onEditProfile={handleOpenEditModalForProfile}
-            onShowOptionsModal={() => setIsOptionsMenuOpen(true)}
-            onShowAddChildModal={() => setIsAddChildModalOpen(true)} onShowThemeModal={() => setIsThemeModalOpen(true)}
-            pastApprovalsCount={pastChoreApprovals.length} onShowPastApprovals={() => setIsPastApprovalModalOpen(true)}
-            menuPulse={isThemeModalOpen && isFirstTimeThemePrompt}
-            potentialEarnings={potentialEarnings} showPotentialEarnings={activeProfile?.showPotentialEarnings}
-            todaysTotalChores={todaysChoresStats.total} todaysCompletedChores={todaysChoresStats.completed}
-          />
-          <Header
-            earnings={earnings} isKidsMode={isKidsMode} profile={activeProfile}
-            onCashOut={() => handleCashOut()} onShowHistory={handleShowHistory}
-            isCashOutDisabled={isCashOutDisabled} showCashOutButton={showCashOutButton}
-            viewMode={viewMode} setViewMode={setViewMode} weeklyTitle={weeklyTitle}
-            isToday={isToday} selectedDate={selectedDate} setSelectedDate={setSelectedDate}
-            currentWeekDays={currentWeekDays} handlePreviousWeek={handlePreviousWeek}
-            handleNextWeek={handleNextWeek} isViewingCurrentWeek={isViewingCurrentWeek}
-            handleGoToCurrentWeek={handleGoToCurrentWeek} onUpdateProfileImage={handleUpdateProfileImage}
-            isTouchDevice={isTouchDevice}
-            onEditCurrentProfile={handleOpenEditModalForProfile}
-          />
-        </div>
-      </header>
       
-      <main ref={mainScrollRef} className={`flex-1 overflow-y-auto relative ${parentFadeClass}`}>
-        <div className="container mx-auto px-4 sm:px-6 md:px-8">
-            {!isKidsMode && profiles.length > 1 && (
-                <div className="mb-6 mt-4 p-3 bg-[var(--bg-tertiary)] rounded-2xl">
-                    <h3 className="text-sm font-semibold text-[var(--text-secondary)] mb-2 text-center">Managing Chores For</h3>
-                    <div className="flex justify-center gap-2 flex-wrap">
-                        {profiles.map(p => (
-                            <button key={p.id} onClick={() => setActiveProfileId(p.id)} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all duration-300 ${activeProfileId === p.id ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-text)] shadow-lg' : 'bg-[var(--bg-secondary)] hover:opacity-80 text-[var(--text-primary)]'}`}>
-                                {p.image ? <img src={p.image} alt={p.name} className="w-6 h-6 rounded-full object-cover"/> : <UserCircleIcon className="w-6 h-6" />}
-                                <span>{p.name}</span>
-                            </button>
-                        ))}
-                    </div>
+      {isKidsMode ? (
+          <div className="h-full flex flex-col">
+              <header className="sticky top-0 z-30 glass-header-container">
+                <div className="container mx-auto px-4 sm:px-6 md:px-8 md:py-4">
+                  <MenuBanner
+                    isKidsMode={isKidsMode} onSwitchToChild={handleSwitchToChild}
+                    onAttemptSwitchToParentMode={handleAttemptSwitchToParentMode}
+                    pendingCount={pendingCashOuts.length} onShowPending={handleOpenPendingModal}
+                    profiles={profiles} activeProfileId={activeProfileId}
+                    onEditProfile={handleOpenEditModalForProfile}
+                    onShowOptionsModal={() => setIsOptionsMenuOpen(true)}
+                    onShowAddChildModal={() => setIsAddChildModalOpen(true)} onShowThemeModal={() => setIsThemeModalOpen(true)}
+                    pastApprovalsCount={pastChoreApprovals.length} onShowPastApprovals={() => setIsPastApprovalModalOpen(true)}
+                    menuPulse={isThemeModalOpen && isFirstTimeThemePrompt}
+                    potentialEarnings={potentialEarnings} showPotentialEarnings={activeProfile?.showPotentialEarnings}
+                    todaysTotalChores={todaysChoresStats.total} todaysCompletedChores={todaysChoresStats.completed}
+                  />
+                  <div className="pt-6 md:pt-4">
+                    <Header
+                      earnings={earnings} isKidsMode={isKidsMode} profile={activeProfile}
+                      onCashOut={() => handleCashOut()} onShowHistory={handleShowHistory}
+                      isCashOutDisabled={isCashOutDisabled} showCashOutButton={showCashOutButton}
+                      weeklyTitle={weeklyTitle}
+                      isToday={isToday} selectedDate={currentDate} setSelectedDate={setCurrentDate}
+                      isViewingCurrentWeek={isViewingCurrentWeek}
+                      handleGoToCurrentWeek={handleGoToCurrentWeek} onUpdateProfileImage={handleUpdateProfileImage}
+                      onEditCurrentProfile={handleOpenEditModalForProfile}
+                      pendingBonuses={pendingBonuses}
+                      onShowBonusNotification={handleShowBonusNotification}
+                      profiles={profiles}
+                      setActiveProfileId={setActiveProfileId}
+                    />
+                  </div>
                 </div>
-            )}
-            
-            <ChoreList
-              chores={filteredChores} currentWeekDays={currentWeekDays} onToggleCompletion={handleToggleCompletion}
-              onEditChore={isKidsMode ? undefined : handleOpenEditModal} viewMode={displayMode} selectedDate={selectedDate}
-              isKidsMode={isKidsMode} onReorderChores={handleReorderChores} pastChoreApprovals={pastChoreApprovals}
-              onApprovePastChore={isKidsMode ? undefined : handleApprovePastChore} draggingChoreId={draggingChoreId}
-              dragOverChoreId={dragOverChoreId} onDragStartTouch={handleDragStartTouch}
-              areSoundsEnabled={parentSettings.areSoundsEnabled}
+              </header>
+              <main ref={mainScrollRef} className="flex-1 overflow-y-auto relative scrollbar-hide">
+                <div className="container mx-auto px-4 sm:px-6 md:px-8 pt-4">
+                    <ChoreList
+                      chores={filteredChores}
+                      currentWeekDays={currentWeekDays}
+                      onToggleCompletion={handleToggleCompletion}
+                      onEditChore={isKidsMode ? undefined : handleOpenEditModal}
+                      viewMode={displayMode}
+                      selectedDate={selectedDate}
+                      isKidsMode={isKidsMode}
+                      pastChoreApprovals={pastChoreApprovals}
+                      onApprovePastChore={isKidsMode ? undefined : handleApprovePastChore}
+                      onReorderChores={handleReorderChores}
+                    />
+                    <div className="h-24" />
+                </div>
+              </main>
+          </div>
+      ) : (
+          <>
+            <MenuBanner 
+                isKidsMode={false} 
+                profiles={profiles} 
+                activeProfileId={activeProfileId}
+                onSwitchToChild={handleSwitchToChild}
+                onAttemptSwitchToParentMode={handleAttemptSwitchToParentMode}
+                pendingCount={pendingCashOuts.length}
+                pastApprovalsCount={pastChoreApprovals.length}
+                onShowPending={handleOpenPendingModal}
+                onShowPastApprovals={() => setIsPastApprovalModalOpen(true)}
+                onEditProfile={(p) => handleOpenEditModalForProfile(p)}
+                onShowOptionsModal={() => setIsOptionsMenuOpen(true)}
+                onShowAddChildModal={() => setIsAddChildModalOpen(true)}
+                onShowThemeModal={() => setIsThemeModalOpen(true)}
+                potentialEarnings={0}
+                showPotentialEarnings={false}
+                todaysTotalChores={0}
+                todaysCompletedChores={0}
             />
-            
-            {/* Spacer for the parent action bar */}
-            {!isKidsMode && <div className="h-24" />}
-        </div>
-      </main>
+            <div 
+                className="flex-grow w-full min-h-0"
+                onTouchStart={profiles.length > 1 ? handleTouchStart : undefined}
+                onTouchMove={profiles.length > 1 ? handleTouchMove : undefined}
+                onTouchEnd={profiles.length > 1 ? handleTouchEnd : undefined}
+            >
+              <div className="h-full flex" style={parentContainerStyle}>
+                  {profiles.map(p => {
+                      const profileChores = choresByProfile[p.id] || [];
+                      const profileEarnings = calculateEarnings(profileChores);
+                      const profilePendingCashOuts = pendingCashOutsByProfile[p.id] || [];
+                      const profilePastApprovals = pastChoreApprovalsByProfile[p.id] || [];
+                      const profilePendingBonuses = pendingBonusNotificationsByProfile[p.id] || [];
+                      
+                      const startOfWeek = getStartOfWeek(currentDate);
+                      const currentWeekDayStrings = Array.from({ length: 7 }).map((_, i) => {
+                          const d = new Date(startOfWeek);
+                          d.setDate(startOfWeek.getDate() + i);
+                          return formatDate(d);
+                      });
+
+                      const profileFilteredChores = profileChores.filter(chore => {
+                          if (chore.type === 'bonus') {
+                              // For bonuses, check if their completion date is in the currently viewed week
+                              const bonusDateString = Object.keys(chore.completions)[0];
+                              return bonusDateString ? currentWeekDayStrings.includes(bonusDateString) : false;
+                          }
+                          if (chore.oneTimeDate) {
+                              // For one-time chores, check if their date is in the currently viewed week
+                              return currentWeekDayStrings.includes(chore.oneTimeDate);
+                          }
+                          // It's a recurring chore, always show
+                          return true;
+                      }).sort((a, b) => {
+                          const aIsBonus = a.type === 'bonus'; const bIsBonus = b.type === 'bonus';
+                          if (aIsBonus && !bIsBonus) return 1; if (!aIsBonus && bIsBonus) return -1;
+                          const aCategoryOrder = a.category ? (CHORE_CATEGORY_ORDER[a.category] ?? 100) : 99;
+                          const bCategoryOrder = b.category ? (CHORE_CATEGORY_ORDER[b.category] ?? 100) : 99;
+                          if (aCategoryOrder !== bCategoryOrder) return aCategoryOrder - bCategoryOrder;
+                          return (a.order || 0) - (b.order || 0);
+                      });
+
+                      const viewProps = {
+                          // Props for Header, ChoreList inside ParentProfileView
+                          profile: p,
+                          chores: profileFilteredChores,
+                          earnings: profileEarnings,
+                          pendingBonuses: profilePendingBonuses,
+                          onCashOut: () => handleCashOut(p.id, profileChores),
+                          onShowHistory: handleShowHistory,
+                          isCashOutDisabled: profileEarnings <= 0,
+                          showCashOutButton: true,
+                          weeklyTitle,
+                          isToday,
+                          selectedDate: currentDate,
+                          setSelectedDate: setCurrentDate,
+                          isViewingCurrentWeek,
+                          handleGoToCurrentWeek,
+                          onUpdateProfileImage: (id: string, img: string | null) => handleUpdateProfileImage(id, img),
+                          onEditCurrentProfile: (prof: Profile) => handleOpenEditModalForProfile(prof),
+                          onShowBonusNotification: handleShowBonusNotification,
+                          profiles,
+                          setActiveProfileId,
+                          currentWeekDays,
+                          onToggleCompletion: handleToggleCompletion,
+                          onEditChore: handleOpenEditModal,
+                          onReorderChores: handleReorderChores,
+                          pastChoreApprovals: profilePastApprovals,
+                          
+                          // Props passed through ParentProfileView to MenuBanner
+                          isKidsMode: false,
+                          activeProfileId: p.id,
+                          onSwitchToChild: handleSwitchToChild,
+                          onAttemptSwitchToParentMode: handleAttemptSwitchToParentMode,
+                          pendingCount: profilePendingCashOuts.length,
+                          pastApprovalsCount: profilePastApprovals.length,
+                          onShowPending: handleOpenPendingModal,
+                          onShowPastApprovals: () => setIsPastApprovalModalOpen(true),
+                          onEditProfile: handleOpenProfileForEditing,
+                          onShowOptionsModal: () => setIsOptionsMenuOpen(true),
+                          onShowAddChildModal: () => setIsAddChildModalOpen(true),
+                          onShowThemeModal: () => setIsThemeModalOpen(true),
+                          potentialEarnings: 0,
+                          showPotentialEarnings: false,
+                          todaysTotalChores: 0,
+                          todaysCompletedChores: 0
+                      };
+                      return (
+                        <div key={p.id} className="h-full w-screen flex-shrink-0">
+                            <ParentProfileView {...viewProps} />
+                        </div>
+                      );
+                  })}
+              </div>
+            </div>
+          </>
+      )}
 
       {!isKidsMode && (
           <ActionBar 
             onAddChore={handleOpenAddModal} 
             onPayBonus={() => setIsBonusModalOpen(true)} 
             pulseAddChore={showAddChorePulse} 
-            areSoundsEnabled={parentSettings.areSoundsEnabled}
           />
       )}
 
@@ -1457,17 +1756,18 @@ useEffect(() => {
       <PendingCashOutsModal isOpen={isPendingModalOpen} onClose={handleClosePendingModal} pendingCashOuts={pendingCashOuts} onOpenReview={handleOpenReviewModal} />
       {recordToReview && <ReviewCashOutModal isOpen={!!recordToReview} onClose={() => setRecordToReview(null)} record={recordToReview} onApprove={handleApproveReviewedCashOut} profileName={activeProfile?.name || ''} />}
       <PastChoresApprovalModal isOpen={isPastApprovalModalOpen} onClose={() => setIsPastApprovalModalOpen(false)} approvals={pastChoreApprovals} onApprove={handleApprovePastChore} onDismiss={handleDismissPastChore} onApproveAll={handleApproveAllPastChores} onDismissAll={handleDismissAllPastChores} />
-      <CashOutConfirmationModal isOpen={isCashOutConfirmOpen} onClose={() => setIsCashOutConfirmOpen(false)} amount={cashedOutAmount} areSoundsEnabled={parentSettings.areSoundsEnabled} />
-      <AllChoresDoneModal isOpen={isAllChoresDoneModalOpen} onClose={() => setIsAllChoresDoneModalOpen(false)} dailyAmount={dailyEarningsForModal} areSoundsEnabled={parentSettings.areSoundsEnabled} />
+      <CashOutConfirmationModal isOpen={isCashOutConfirmOpen} onClose={() => setIsCashOutConfirmOpen(false)} amount={cashedOutAmount} />
+      <AllChoresDoneModal isOpen={isAllChoresDoneModalOpen} onClose={() => setIsAllChoresDoneModalOpen(false)} dailyAmount={dailyEarningsForModal} />
       {isEditProfileModalOpen && profileToEdit && (<EditProfileModal isOpen={isEditProfileModalOpen} onClose={() => { setIsEditProfileModalOpen(false); setProfileToEdit(null); }} onSave={handleUpdateProfile} onDelete={handleDeleteProfile} initialData={profileToEdit} />)}
       <PasscodeSetupModal isOpen={isPasscodeSetupModalOpen} onClose={() => setIsPasscodeSetupModalOpen(false)} onSave={handlePasscodeSetupSuccess} />
       <PasscodeEntryModal isOpen={isPasscodeEntryModalOpen} onClose={() => setIsPasscodeEntryModalOpen(false)} onSuccess={handlePasscodeEntrySuccess} passcodeToMatch={parentSettings.passcode} onForgotPassword={handleOpenForgotPassword} />
       <ForgotPasscodeModal isOpen={isForgotPasscodeModalOpen} onClose={() => setIsForgotPasscodeModalOpen(false)} onSuccess={handleForgotPasscodeSuccess} />
-      <OptionsMenuModal isOpen={isOptionsMenuOpen} onClose={() => setIsOptionsMenuOpen(false)} settings={parentSettings} onUpdateSettings={handleUpdateParentSettings} profiles={profiles} onEditProfile={handleOpenProfileForEditing} />
+      <OptionsMenuModal isOpen={isOptionsMenuOpen} onClose={() => setIsOptionsMenuOpen(false)} settings={parentSettings} onUpdateSettings={handleUpdateParentSettings} profiles={profiles} onEditProfile={handleOpenProfileForEditing} onInstallApp={handleInstallApp} canInstall={!!installPrompt} />
       <AddChildModal isOpen={isAddChildModalOpen} onClose={() => setIsAddChildModalOpen(false)} onSave={handleAddChild} />
       <ThemeModal isOpen={isThemeModalOpen} onClose={handleCloseThemeModal} onSave={handleUpdateTheme} currentTheme={themeForModal} isFirstTime={isFirstTimeThemePrompt} />
       <BonusAwardModal isOpen={isBonusModalOpen} onClose={() => setIsBonusModalOpen(false)} onAward={handleAwardBonus} profiles={profiles} defaultBonusValue={parentSettings.defaultBonusValue} />
-      {activeBonusNotification && <BonusAwardedNotificationModal isOpen={!!activeBonusNotification} onClose={() => setActiveBonusNotification(null)} bonus={activeBonusNotification} areSoundsEnabled={parentSettings.areSoundsEnabled} />}
+      {activeBonusNotification && <BonusAwardedNotificationModal isOpen={!!activeBonusNotification} onClose={() => setActiveBonusNotification(null)} bonus={activeBonusNotification} onAcknowledge={handleAcknowledgeBonus} />}
+      {isParentBonusConfirmModalOpen && <ParentBonusConfirmationModal isOpen={isParentBonusConfirmModalOpen} onClose={() => setIsParentBonusConfirmModalOpen(false)} childName={bonusAwardedToName} />}
       {!isKidsMode && (<ChoreFormModal isOpen={isModalOpen} onClose={handleCloseModal} onSave={handleSaveChore} initialData={choreToEdit} defaultChoreValue={parentSettings.defaultChoreValue} onDelete={handleDeleteChore} customCategories={parentSettings.customCategories || []} onAddCustomCategory={handleAddCustomCategory} />)}
       {isBlurActive && (
           <div 
